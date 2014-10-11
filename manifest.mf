@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+OpenIDE-Module: org.nikska.php.ameliore
+OpenIDE-Module-Layer: org/nikska/php/ameliore/editor/resources/layer.xml
+OpenIDE-Module-Localizing-Bundle: org/nikska/php/ameliore/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.1
+
