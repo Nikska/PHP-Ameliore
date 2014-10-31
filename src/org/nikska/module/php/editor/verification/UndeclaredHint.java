@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.nikska.php.ameliore.editor.verification;
+package org.nikska.module.php.editor.verification;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collection;
@@ -37,6 +37,7 @@ import org.netbeans.modules.php.editor.parser.astnodes.visitors.DefaultTreePathV
 import org.netbeans.modules.php.editor.verification.CustomisableRule;
 import org.netbeans.modules.php.editor.verification.HintRule;
 import org.netbeans.modules.php.editor.verification.PHPRuleContext;
+import org.nikska.module.php.editor.verification.Bundle;
 import org.openide.filesystems.FileObject;
 import org.openide.util.NbBundle.Messages;
 

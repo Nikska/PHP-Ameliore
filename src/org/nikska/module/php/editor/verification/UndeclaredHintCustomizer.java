@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.nikska.php.ameliore.editor.verification;
+package org.nikska.module.php.editor.verification;
 
 import java.util.prefs.Preferences;
 
@@ -86,7 +86,6 @@ public class UndeclaredHintCustomizer extends javax.swing.JPanel {
 
         add(jPanel1, java.awt.BorderLayout.CENTER);
         jPanel1.getAccessibleContext().setAccessibleDescription(org.openide.util.NbBundle.getMessage(UndeclaredHintCustomizer.class, "UndeclaredHintCustomizer.panel.accessibleDescription")); // NOI18N
-        jPanel1.getAccessibleContext().setAccessibleParent(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void checkUndeclaredClassCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkUndeclaredClassCheckBoxActionPerformed

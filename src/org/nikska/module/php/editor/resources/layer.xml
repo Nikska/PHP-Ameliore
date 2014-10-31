@@ -6,8 +6,8 @@
             <folder name="x-php5">
                 <folder name="hints">
                     <attr name="position" intvalue="100"/>
-                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.nikska.php.ameliore.editor.verification.Bundle"/>
-                    <file name="org-nikska-php-ameliore-editor-verification-UndeclaredHint.instance" />
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.nikska.module.php.editor.verification.Bundle"/>
+                    <file name="org-nikska-module-php-editor-verification-UndeclaredHint.instance" />
                 </folder>
             </folder>
         </folder>
