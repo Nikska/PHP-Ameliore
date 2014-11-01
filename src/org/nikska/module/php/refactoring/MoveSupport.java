@@ -46,17 +46,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.Icon;
-import javax.swing.JEditorPane;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 import org.netbeans.modules.csl.api.ElementKind;
 import org.netbeans.modules.csl.api.Modifier;
 import org.netbeans.modules.csl.api.OffsetRange;
@@ -67,28 +62,24 @@ import org.netbeans.modules.parsing.api.Source;
 import org.netbeans.modules.parsing.api.UserTask;
 import org.netbeans.modules.parsing.spi.ParseException;
 import org.netbeans.modules.parsing.spi.Parser.Result;
+import org.netbeans.modules.php.editor.NavUtils;
 import org.netbeans.modules.php.editor.api.ElementQuery;
 import org.netbeans.modules.php.editor.api.ElementQuery.Index;
 import org.netbeans.modules.php.editor.api.ElementQueryFactory;
 import org.netbeans.modules.php.editor.api.PhpElementKind;
 import org.netbeans.modules.php.editor.api.QuerySupportFactory;
-import org.netbeans.modules.php.editor.api.elements.MethodElement;
 import org.netbeans.modules.php.editor.api.elements.PhpElement;
-import org.netbeans.modules.php.editor.api.elements.TypeElement;
-import org.netbeans.modules.php.editor.model.FindUsageSupport;
 import org.netbeans.modules.php.editor.model.Model;
 import org.netbeans.modules.php.editor.model.ModelElement;
 import org.netbeans.modules.php.editor.model.ModelFactory;
-import org.netbeans.modules.php.editor.model.ModelUtils;
 import org.netbeans.modules.php.editor.model.Occurence;
 import org.netbeans.modules.php.editor.model.TypeScope;
-import org.netbeans.modules.php.editor.model.VariableName;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.php.editor.parser.astnodes.ASTNode;
+import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
 import org.openide.awt.ActionReferences;
-import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.nodes.Node;
@@ -107,18 +98,14 @@ public final class MoveSupport {
     private ASTNode node;
     private FileObject fo;
     private PhpElementKind kind;
-    //private final Set<ModelElement> declarations;
     private ModelElement modelElement;
     private Set<Modifier> modifier;
-    private ElementQuery.Index idx;
-    private EditorCookie editorCookie;
     private int offset;
     private PHPParseResult result;
     private final Results results;
     private final OffsetRange offsetRange;
-    //private final Document document;
-    //private final int caretStart;
-    //private final int caretEnd;
+    private ElementQuery.Index index;
+    private ClassDeclaration classDeclaration;
 
     private MoveSupport(ElementQuery.Index idx, PHPParseResult result, int offset, OffsetRange offsetRange, FileObject fo) {
         this.result = result;
@@ -126,6 +113,26 @@ public final class MoveSupport {
         this.results = new Results();
         this.fo = fo;
         this.offsetRange = offsetRange;
+        this.index = idx;
+        initClassElement();
+    }
+    
+    private void initClassElement()
+    {
+        List<ASTNode> nodes = NavUtils.underCaret(result, offset);
+        for (ASTNode node : nodes) {
+            if (node instanceof ClassDeclaration && node.getEndOffset() != offset) {
+                classDeclaration = (ClassDeclaration) node;
+            }
+        }
+    }
+    
+    public ClassDeclaration getClassDeclaration() {
+        return classDeclaration;
+    }
+    
+    public PHPParseResult getParseResult() {
+        return result;
     }
     
     public int getBegin() {
@@ -188,8 +195,7 @@ public final class MoveSupport {
         return result;
     }
     
-    public static MoveSupport getInstance(final PHPParseResult info, final int offset, OffsetRange offsetRange) {
-        
+    public static MoveSupport getInstance(ElementQuery.Index index, final PHPParseResult info, final int offset, OffsetRange offsetRange) {
         Model model = ModelFactory.getModel(info);
         model.getOccurencesSupport(offsetRange);
         final Occurence occurence = findOccurence(model, offset);

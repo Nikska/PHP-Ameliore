@@ -41,11 +41,11 @@
  */
 package org.nikska.module.php.refactoring;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
 import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
@@ -53,7 +53,6 @@ import org.netbeans.modules.php.editor.model.ModelElement;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
 import org.netbeans.modules.refactoring.api.MoveRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
-import org.netbeans.modules.refactoring.api.ProgressEvent;
 import org.netbeans.modules.refactoring.api.RenameRefactoring;
 import org.netbeans.modules.refactoring.spi.ProgressProviderAdapter;
 import org.netbeans.modules.refactoring.spi.RefactoringCommit;
@@ -133,8 +132,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     private void refactorElement(ModificationResult modificationResult) {
-        List<Difference> diffs = new ArrayList<>();
-        
+
         DataObject dob = null;
         try {
             dob = DataObject.find(usages.getDeclarationFileObject());
@@ -151,21 +149,8 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
             cloneableEditorSupport = (CloneableEditorSupport) obj;
         }
         
-        
         CloneableEditorSupport ces = cloneableEditorSupport;
-        PositionRef ref1 = ces.createPositionRef(usages.getBegin(), Position.Bias.Forward);
-        PositionRef ref2 = ces.createPositionRef(usages.getEnd(), Position.Bias.Forward);
-        PositionBounds bounds = new PositionBounds(ref1, ref2);
-        diffs.add(new Difference(Difference.Kind.CHANGE,
-                bounds.getBegin(),
-                bounds.getEnd(),
-                "Name",
-                "",
-                "Desc"));
-        if (!diffs.isEmpty()) {
-            modificationResult.addDifferences(usages.getDeclarationFileObject(), diffs);
-        }
-
+        moveDiff(ces, modificationResult);
     }
 
     @Override
@@ -175,5 +160,42 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
 
     @Override
     public void cancelRequest() {
+    }
+
+    private void moveDiff(CloneableEditorSupport ces, ModificationResult modificationResult) {
+        List<Difference> diffs = new ArrayList<>();
+        
+        PositionRef ref1 = ces.createPositionRef(usages.getBegin(), Position.Bias.Forward);
+        PositionRef ref2 = ces.createPositionRef(usages.getEnd(), Position.Bias.Forward);
+        PositionBounds bounds = new PositionBounds(ref1, ref2);
+        String text = "";
+        try {
+            text = bounds.getText();
+        } catch (BadLocationException ex) {
+            Exceptions.printStackTrace(ex);
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+        
+        diffs.add(new Difference(Difference.Kind.REMOVE,
+                bounds.getBegin(),
+                bounds.getEnd(),
+                text,
+                "",
+                "Desc"));
+        
+        int classOffsetEnd = usages.getClassDeclaration().getEndOffset() - 1;
+        PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
+
+        diffs.add(new Difference(Difference.Kind.INSERT,
+                begin,
+                begin,
+                "",
+                text + "\n",
+                "Desc2"));
+        
+        if (!diffs.isEmpty()) {
+            modificationResult.addDifferences(usages.getDeclarationFileObject(), diffs);
+        }
     }
 }

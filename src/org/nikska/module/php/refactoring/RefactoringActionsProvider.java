@@ -43,16 +43,14 @@
  */
 package org.nikska.module.php.refactoring;
 
-import java.util.Collection;
 import org.netbeans.modules.csl.api.OffsetRange;
+import org.netbeans.modules.php.editor.api.ElementQuery;
+import static org.netbeans.modules.php.editor.api.ElementQueryFactory.getIndexQuery;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.spi.ui.ActionsImplementationProvider;
 import org.netbeans.modules.refactoring.spi.ui.RefactoringUI;
 import org.netbeans.modules.refactoring.spi.ui.UI;
 import org.openide.cookies.EditorCookie;
-import org.openide.filesystems.FileObject;
-import org.openide.loaders.DataObject;
-import org.openide.nodes.Node;
 import org.openide.util.Lookup;
 import org.openide.windows.TopComponent;
 
@@ -92,8 +90,8 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider {
             @Override
             protected RefactoringUIHolder createRefactoringUI(final PHPParseResult info, final int offset, OffsetRange offsetRange) {
                 RefactoringUIHolder result = RefactoringUIHolder.NONE;
-                
-                MoveSupport ctx = MoveSupport.getInstance(info, offset, offsetRange);
+                ElementQuery.Index index = getIndexQuery(info);
+                MoveSupport ctx = MoveSupport.getInstance(index, info, offset, offsetRange);
                 if (ctx != null) {
                     result = new RefactoringUIHolderImpl(new PhpMovefactoringUI(ctx));
                 }
