@@ -200,11 +200,9 @@ public class MoveElement extends SimpleRefactoringElementImplementation {
                     // XXX Shouldn't happen, but I still have AST offset errors
                     en = end;
                 }
-                sb.append(content.subSequence(sta, start).toString());
                 sb.append("<b>"); // NOI18N
-                sb.append(content.subSequence(start, end));
+                sb.append(content.subSequence(sta, en).toString().trim());
                 sb.append("</b>"); // NOI18N
-                sb.append(content.subSequence(end, en).toString());
 
                 CloneableEditorSupport ces = findCloneableEditorSupport(fo);
                 PositionRef ref1 = ces.createPositionRef(start, Bias.Forward);

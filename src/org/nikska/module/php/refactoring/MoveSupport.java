@@ -106,6 +106,7 @@ public final class MoveSupport {
     private final OffsetRange offsetRange;
     private ElementQuery.Index index;
     private ClassDeclaration classDeclaration;
+    private String newName;
 
     private MoveSupport(ElementQuery.Index idx, PHPParseResult result, int offset, OffsetRange offsetRange, FileObject fo) {
         this.result = result;
@@ -115,6 +116,14 @@ public final class MoveSupport {
         this.offsetRange = offsetRange;
         this.index = idx;
         initClassElement();
+    }
+    
+    public void setNameName(String newName) {
+        this.newName = newName;
+    }
+    
+    public String getNewName() {
+        return newName;
     }
     
     private void initClassElement()
@@ -284,7 +293,7 @@ public final class MoveSupport {
     Results getResults() {
         return results;
     }
-    
+
     public final class Results {
 
         Collection<MoveElement> elements = new TreeSet<>(new Comparator<MoveElement>() {

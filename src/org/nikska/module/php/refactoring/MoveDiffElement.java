@@ -41,11 +41,14 @@
  */
 package org.nikska.module.php.refactoring;
 
+import java.io.IOException;
+import java.lang.ref.WeakReference;
 import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
 import org.netbeans.modules.refactoring.spi.SimpleRefactoringElementImplementation;
 import org.openide.filesystems.FileObject;
 import org.openide.text.PositionBounds;
+import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.Lookups;
 
@@ -55,6 +58,12 @@ import org.openide.util.lookup.Lookups;
  */
 public final class MoveDiffElement extends SimpleRefactoringElementImplementation {
     private final String newFileName;
+    private WeakReference<String> newFileContent;
+    private ModificationResult modification;
+    private String displayText;
+    private final Difference diff;
+    private final FileObject parentFile;
+    private PositionBounds bounds;
 
     public static MoveDiffElement create(
             ModificationResult.Difference diff,
@@ -62,10 +71,6 @@ public final class MoveDiffElement extends SimpleRefactoringElementImplementatio
             ModificationResult modification) {
         return new MoveDiffElement(diff, new PositionBounds(diff.getStartPosition(), diff.getEndPosition()), fileObject, modification);
     }
-    private String displayText;
-    private final Difference diff;
-    private final FileObject parentFile;
-    private PositionBounds bounds;
 
     public MoveDiffElement(Difference diff, PositionBounds bounds, FileObject parentFile, ModificationResult modification) {
         this.newFileName = diff.getNewText();
@@ -73,6 +78,26 @@ public final class MoveDiffElement extends SimpleRefactoringElementImplementatio
         this.diff = diff;
         this.parentFile = parentFile;
         this.bounds = bounds;
+        this.modification = modification;
+    }
+    
+    @Override
+    protected String getNewFileContent() {
+        String result;
+        if (newFileContent != null) {
+            result = newFileContent.get();
+            if (result != null) {
+                return result;
+            }
+        }
+        try {
+            result = modification.getResultingSource(parentFile);
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
+            return null;
+        }
+        newFileContent = new WeakReference<>(result);
+        return result;
     }
 
     @Override

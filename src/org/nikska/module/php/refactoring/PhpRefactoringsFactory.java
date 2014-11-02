@@ -54,15 +54,14 @@ import org.openide.util.Lookup;
 public class PhpRefactoringsFactory implements RefactoringPluginFactory {
     @Override
     public RefactoringPlugin createInstance(AbstractRefactoring refactoring) {
-        if (refactoring instanceof MoveRefactoring) {
-            return createMove((MoveRefactoring)refactoring);
+        if (refactoring instanceof PhpMoveRefactoring) {
+            return createMove((PhpMoveRefactoring)refactoring);
         }
         return null;
     }
 
-    private RefactoringPlugin createMove(MoveRefactoring refactoring) {
+    private RefactoringPlugin createMove(PhpMoveRefactoring refactoring) {
         Lookup look = refactoring.getRefactoringSource();
-        refactoring.setTarget(look);
         MoveSupport handle = look.lookup(MoveSupport.class);
         return (handle != null) ? new PhpMoveRefactoringPlugin(refactoring) : null;
     }

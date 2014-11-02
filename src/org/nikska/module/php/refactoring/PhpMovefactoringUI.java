@@ -46,11 +46,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import javax.swing.event.ChangeListener;
 import org.netbeans.modules.csl.api.ElementKind;
-import org.netbeans.modules.php.editor.api.PhpElementKind;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
-import org.netbeans.modules.refactoring.api.MoveRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
-import org.netbeans.modules.refactoring.api.RenameRefactoring;
 import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
 import org.netbeans.modules.refactoring.spi.ui.RefactoringUI;
 import org.netbeans.modules.refactoring.spi.ui.RefactoringUIBypass;
@@ -66,18 +63,14 @@ import org.openide.util.lookup.Lookups;
 public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
 
     private final AbstractRefactoring refactoring;
-    //private final String name;
-    //private final ElementKind kind;
-    private RenamePanel panel;
-    //private final PhpElementKind phpKind;
+    private MovePanel panel;
+    private final MoveSupport usage;
 
     public PhpMovefactoringUI(MoveSupport usage) {
-        //kind = usage.getElementKind();
-        //phpKind = usage.getPhpElementKind();
-        //name = getElementName(usage.getName(), kind);
         Collection<Object> lookupContent = new ArrayList<>();
+        this.usage = usage;
         lookupContent.add(usage);
-        this.refactoring = new MoveRefactoring(Lookups.fixed(lookupContent.toArray()));
+        this.refactoring = new PhpMoveRefactoring(Lookups.fixed(lookupContent.toArray()));
         this.refactoring.getContext().add(UI.Constants.REQUEST_PREVIEW);
     }
 
@@ -109,7 +102,7 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     @Override
     public CustomRefactoringPanel getPanel(ChangeListener parent) {
         if (panel == null) {
-            panel = new RenamePanel(parent, NbBundle.getMessage(RenamePanel.class, "LBL_Move"), true, true); //NOI18N
+            panel = new MovePanel(parent, NbBundle.getMessage(MovePanel.class, "LBL_Move"), true, true); //NOI18N
         }
 
         return panel;
@@ -117,23 +110,18 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
 
     @Override
     public Problem setParameters() {
-        /*String newName = panel.getNameValue();
-        if (refactoring instanceof MoveRefactoring) {
-            ((MoveRefactoring) refactoring).setNewName(newName);
-            ((MoveRefactoring) refactoring).getContext().add(new RenameDeclarationFile(panel.renameDeclarationFile(), panel.lowerCaseFileName()));
-        }*/
+        String newName = panel.getNameValue();
+        if (refactoring instanceof PhpMoveRefactoring) {
+            ((PhpMoveRefactoring) refactoring).setNewName(newName);
+        }
         return refactoring.checkParameters();
     }
 
     @Override
     public Problem checkParameters() {
-        /*if (!panel.isUpdateReferences()) {
-            return null;
+        if (refactoring instanceof PhpMoveRefactoring) {
+            ((PhpMoveRefactoring) refactoring).setNewName(panel.getNameValue());
         }
-        if (refactoring instanceof RenameRefactoring) {
-            ((RenameRefactoring) refactoring).setNewName(panel.getNameValue());
-            ((RenameRefactoring) refactoring).getContext().add(new RenameDeclarationFile(panel.renameDeclarationFile(), panel.lowerCaseFileName()));
-        }*/
         return refactoring.checkParameters();
     }
 

@@ -51,9 +51,7 @@ import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
 import org.netbeans.modules.php.editor.model.ModelElement;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
-import org.netbeans.modules.refactoring.api.MoveRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
-import org.netbeans.modules.refactoring.api.RenameRefactoring;
 import org.netbeans.modules.refactoring.spi.ProgressProviderAdapter;
 import org.netbeans.modules.refactoring.spi.RefactoringCommit;
 import org.netbeans.modules.refactoring.spi.RefactoringElementsBag;
@@ -78,7 +76,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     private MoveSupport usages;
     private final List<ModelElement> modelElements;
     
-    public PhpMoveRefactoringPlugin(MoveRefactoring refactoring) {
+    public PhpMoveRefactoringPlugin(PhpMoveRefactoring refactoring) {
         this.refactoring = refactoring;
         this.usages = refactoring.getRefactoringSource().lookup(MoveSupport.class);
         modelElements = usages.getModelElements();
@@ -96,8 +94,8 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         return null;
     }
 
-    public RenameRefactoring getRefactoring() {
-        return (RenameRefactoring) refactoring;
+    public PhpMoveRefactoring getRefactoring() {
+        return (PhpMoveRefactoring) refactoring;
     }
 
     @Override
@@ -122,10 +120,6 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         refactoringElements.registerTransaction(new RefactoringCommit(Collections.singletonList(modificationResult)));
         for (FileObject fo : modificationResult.getModifiedFileObjects()) {
             for (Difference diff : modificationResult.getDifferences(fo)) {
-                /*FileRenamer fileRenamer = FileRenamer.NONE;
-                if (fo.equals(declarationFileObject) && renameDeclarationFile != null) {
-                    fileRenamer = new DelcarationFileRenamer(fo, renameDeclarationFile);
-                }*/
                 refactoringElements.add(refactoring, MoveDiffElement.create(diff, fo, modificationResult));
             }
         }
@@ -171,18 +165,16 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         String text = "";
         try {
             text = bounds.getText();
-        } catch (BadLocationException ex) {
-            Exceptions.printStackTrace(ex);
-        } catch (IOException ex) {
+        } catch (BadLocationException | IOException ex) {
             Exceptions.printStackTrace(ex);
         }
         
-        diffs.add(new Difference(Difference.Kind.REMOVE,
+        diffs.add(new Difference(Difference.Kind.CHANGE,
                 bounds.getBegin(),
                 bounds.getEnd(),
                 text,
-                "",
-                "Desc"));
+                getUsageNewDeclaration(),
+                "New method : " + getRefactoring().getNewName()));
         
         int classOffsetEnd = usages.getClassDeclaration().getEndOffset() - 1;
         PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
@@ -191,11 +183,29 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
                 begin,
                 begin,
                 "",
-                text + "\n",
+                getStartNewDeclaration() + text + getEndNewDeclaration(),
                 "Desc2"));
         
         if (!diffs.isEmpty()) {
             modificationResult.addDifferences(usages.getDeclarationFileObject(), diffs);
         }
+    }
+    
+    private String getUsageNewDeclaration()
+    {
+        String newDeclaration = "$this->" + getRefactoring().getNewName()+ "();";
+        return newDeclaration;
+    }
+    
+    private String getStartNewDeclaration()
+    {
+        String newDeclaration = "\npublic function " + getRefactoring().getNewName()+ "() {\n";
+        return newDeclaration;
+    }
+    
+    private String getEndNewDeclaration()
+    {
+        String newDeclaration = "\n}\n";
+        return newDeclaration;
     }
 }
