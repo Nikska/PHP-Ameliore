@@ -73,7 +73,7 @@ import org.openide.util.NbBundle;
 public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements RefactoringPlugin {
 
     protected AbstractRefactoring refactoring;
-    private MoveSupport usages;
+    private final MoveSupport usages;
     private final List<ModelElement> modelElements;
     
     public PhpMoveRefactoringPlugin(PhpMoveRefactoring refactoring) {
@@ -193,13 +193,13 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     
     private String getUsageNewDeclaration()
     {
-        String newDeclaration = "$this->" + getRefactoring().getNewName()+ "();";
+        String newDeclaration = "$this->" + getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
         return newDeclaration;
     }
     
     private String getStartNewDeclaration()
     {
-        String newDeclaration = "\npublic function " + getRefactoring().getNewName()+ "() {\n";
+        String newDeclaration = "\npublic function " + getRefactoring().getNewName()+ "(" + usages.getParameters() + ") {\n";
         return newDeclaration;
     }
     

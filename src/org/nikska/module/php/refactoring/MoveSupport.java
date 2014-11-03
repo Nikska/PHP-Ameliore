@@ -56,12 +56,6 @@ import org.netbeans.modules.csl.api.ElementKind;
 import org.netbeans.modules.csl.api.Modifier;
 import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.csl.api.UiUtils;
-import org.netbeans.modules.parsing.api.ParserManager;
-import org.netbeans.modules.parsing.api.ResultIterator;
-import org.netbeans.modules.parsing.api.Source;
-import org.netbeans.modules.parsing.api.UserTask;
-import org.netbeans.modules.parsing.spi.ParseException;
-import org.netbeans.modules.parsing.spi.Parser.Result;
 import org.netbeans.modules.php.editor.NavUtils;
 import org.netbeans.modules.php.editor.api.ElementQuery;
 import org.netbeans.modules.php.editor.api.ElementQuery.Index;
@@ -69,11 +63,14 @@ import org.netbeans.modules.php.editor.api.ElementQueryFactory;
 import org.netbeans.modules.php.editor.api.PhpElementKind;
 import org.netbeans.modules.php.editor.api.QuerySupportFactory;
 import org.netbeans.modules.php.editor.api.elements.PhpElement;
+import org.netbeans.modules.php.editor.model.FindUsageSupport;
 import org.netbeans.modules.php.editor.model.Model;
 import org.netbeans.modules.php.editor.model.ModelElement;
 import org.netbeans.modules.php.editor.model.ModelFactory;
 import org.netbeans.modules.php.editor.model.Occurence;
 import org.netbeans.modules.php.editor.model.TypeScope;
+import org.netbeans.modules.php.editor.model.VariableName;
+import org.netbeans.modules.php.editor.model.VariableScope;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.php.editor.parser.astnodes.ASTNode;
 import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
@@ -83,8 +80,8 @@ import org.openide.awt.ActionReferences;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.nodes.Node;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
+import org.netbeans.modules.php.editor.model.Scope;
 
 /**
  *
@@ -107,6 +104,9 @@ public final class MoveSupport {
     private ElementQuery.Index index;
     private ClassDeclaration classDeclaration;
     private String newName;
+    private final Set<PhpElement> variableInMoveScope;
+    private final Set<PhpElement> variableBeforeMoveScope;
+    private final Set<PhpElement> variableAfterMoveScope;
 
     private MoveSupport(ElementQuery.Index idx, PHPParseResult result, int offset, OffsetRange offsetRange, FileObject fo) {
         this.result = result;
@@ -116,6 +116,37 @@ public final class MoveSupport {
         this.offsetRange = offsetRange;
         this.index = idx;
         initClassElement();
+        Model model = ModelFactory.getModel(result);
+        variableInMoveScope = new HashSet<>();
+        variableBeforeMoveScope = new HashSet<>();
+        variableAfterMoveScope = new HashSet<>();
+        
+        VariableScope variableScope = model.getVariableScope(offsetRange.getStart());
+        if (variableScope != null) {
+            Collection<? extends VariableName> declaredVariables = variableScope.getDeclaredVariables();
+            for (VariableName varName : declaredVariables) {
+                FindUsageSupport usageSupport = FindUsageSupport.getInstance(index, varName);
+                Collection<Occurence> occurences = usageSupport.occurences(variableScope.getFileObject());
+                if (occurences != null) {
+                    boolean addToVariableBlock = addToVariableBlock(occurences, offsetRange);
+                    for (Occurence occurence : occurences) {
+                        
+                        //Recherche les variables du block move
+                        if (isInBlock(occurence.getOccurenceRange(), offsetRange) && addToVariableBlock) {
+                            variableInMoveScope.add(varName);
+                        }
+                        //Recherche les variables avant le block move
+                        if (occurence.getOccurenceRange().getEnd() < offsetRange.getStart()) {
+                            variableBeforeMoveScope.add(varName);
+                        }
+                        //Recherche les variables après le block move
+                        if (occurence.getOccurenceRange().getStart() > offsetRange.getEnd()) {
+                            variableAfterMoveScope.add(varName);
+                        }
+                    }
+                }
+            }
+        }
     }
     
     public void setNameName(String newName) {
@@ -183,10 +214,6 @@ public final class MoveSupport {
         return kind;
     }
 
-    /*public ElementKind getElementKind() {
-        return modelElement.getPHPElement().getKind();
-    }*/
-
     public PhpElementKind getPhpElementKind() {
         return modelElement.getPhpElementKind();
     }
@@ -196,49 +223,15 @@ public final class MoveSupport {
         return getModifiers(attributeElement);
     }
 
-    private static Occurence findOccurence(final Model model, final int offset) {
-        Occurence result = model.getOccurencesSupport(offset).getOccurence();
+    private static Occurence findOccurence(final Model model, final OffsetRange offsetRange) {
+        Occurence result = model.getOccurencesSupport(offsetRange).getOccurence();
         if (result == null) {
-            result = model.getOccurencesSupport(offset + "$".length()).getOccurence(); //NOI18N
+            //result = model.getOccurencesSupport(offset + "$".length()).getOccurence(); //NOI18N
         }
         return result;
     }
     
     public static MoveSupport getInstance(ElementQuery.Index index, final PHPParseResult info, final int offset, OffsetRange offsetRange) {
-        Model model = ModelFactory.getModel(info);
-        model.getOccurencesSupport(offsetRange);
-        final Occurence occurence = findOccurence(model, offset);
-        final Set<ModelElement> declarations = new HashSet<>();
-        final Collection<? extends PhpElement> allDeclarations = occurence != null ? occurence.getAllDeclarations() : Collections.<PhpElement>emptyList();
-        boolean canContinue = occurence != null && allDeclarations.size() > 0 && allDeclarations.size() < 5;
-        if (canContinue && occurence != null && EnumSet.of(Occurence.Accuracy.EXACT, Occurence.Accuracy.MORE, Occurence.Accuracy.UNIQUE).contains(occurence.degreeOfAccuracy())) {
-            FileObject parserFo = info.getSnapshot().getSource().getFileObject();
-            for (final PhpElement declarationElement : allDeclarations) {
-                try {
-                    final FileObject fileObject = declarationElement.getFileObject();
-                    if (fileObject != null && parserFo != fileObject) {
-                        ParserManager.parse(Collections.singleton(Source.create(fileObject)), new UserTask() {
-
-                            @Override
-                            public void run(ResultIterator resultIterator) throws Exception {
-                                Result parserResult = resultIterator.getParserResult();
-                                if (parserResult != null && parserResult instanceof PHPParseResult) {
-                                    Model modelForDeclaration = ModelFactory.getModel((PHPParseResult) parserResult);
-                                    declarations.add(modelForDeclaration.findDeclaration(declarationElement));
-                                }
-                            }
-                        });
-                    } else {
-                        declarations.add(model.findDeclaration(declarationElement));
-                    }
-                } catch (ParseException ex) {
-                    Exceptions.printStackTrace(ex);
-                    return null;
-                }
-            }
-        }
-        
-        
         FileObject fileObject = info.getSnapshot().getSource().getFileObject();
         final Index indexQuery = ElementQueryFactory.createIndexQuery(QuerySupportFactory.getDependent(fileObject));
         return new MoveSupport(indexQuery, info, offset, offsetRange, fileObject);
@@ -292,6 +285,99 @@ public final class MoveSupport {
 
     Results getResults() {
         return results;
+    }
+
+    public String getParameters() {
+        String parameters = "";
+        boolean hasParameter = false;
+        for (PhpElement element : variableInMoveScope) {
+            if (variableBeforeMoveScope.contains(element)) {
+                if (hasParameter) {
+                  parameters += ", ";
+                }
+                parameters += element.getName();
+                hasParameter = true;
+            }
+        }
+        return parameters;
+    }
+
+    private Occurence getFirstOccuranceInBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
+        Occurence firstOccurence = null;
+        for (Occurence occurence : occurences) {
+            if (isInBlock(occurence.getOccurenceRange(), offsetRange)) {
+                
+                if (firstOccurence == null) {
+                    firstOccurence = occurence;
+                }
+                else if (firstOccurence != null && 
+                    !firstOccurence.getOccurenceRange().equals(occurence.getOccurenceRange()) &&
+                    occurence.getOccurenceRange().getEnd() < firstOccurence.getOccurenceRange().getStart()) {
+                    firstOccurence = occurence;
+                }
+            }
+        }
+        
+        return firstOccurence;
+    }
+    
+    private boolean isInBlock(OffsetRange occurenceRange, OffsetRange blockOffsetRange) {
+        if (occurenceRange.getEnd() > blockOffsetRange.getStart() &&
+            occurenceRange.getStart() < blockOffsetRange.getEnd()) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isFirstOccuranceAssignment(Collection<Occurence> occurences, OffsetRange offsetRange) {
+        Occurence firstOccurence = getFirstOccuranceInBlock(occurences, offsetRange);
+
+        //Recherche les assignement
+        List<? extends ModelElement> scopeElements = null;
+        for (Occurence occurence : occurences) {
+            for (PhpElement declaration : occurence.getAllDeclarations()) {
+                if (declaration instanceof Scope) {
+                    scopeElements = ((Scope) declaration).getElements();
+                }
+                break;
+            }
+            break;
+        }
+        
+        if (scopeElements == null || scopeElements.isEmpty()) {
+            return false;
+        }
+        
+        OffsetRange firstScopeElementRange = null;
+        for (ModelElement scopeElement : scopeElements) {
+            OffsetRange scopeElementRange = scopeElement.getOffsetRange(result);
+            if (isInBlock(scopeElementRange, offsetRange)) {
+                if (scopeElement.getName().startsWith("$")) {
+                    scopeElementRange = new OffsetRange(scopeElementRange.getStart() + 1, scopeElementRange.getEnd());
+                }
+                if (firstScopeElementRange == null) {
+                    firstScopeElementRange = scopeElementRange;
+                }
+                else if(firstScopeElementRange.getStart() > scopeElementRange.getEnd()) {
+                    firstScopeElementRange = scopeElementRange;
+                }
+            }
+        }
+        
+        if (firstOccurence.getOccurenceRange().equals(firstScopeElementRange)) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    private boolean addToVariableBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
+        Occurence firstOccuranceInBlock = getFirstOccuranceInBlock(occurences, offsetRange);
+
+        if (firstOccuranceInBlock == null) {
+            return false;
+        }
+        return !isFirstOccuranceAssignment(occurences, offsetRange);
     }
 
     public final class Results {
