@@ -104,9 +104,10 @@ public final class MoveSupport {
     private ElementQuery.Index index;
     private ClassDeclaration classDeclaration;
     private String newName;
-    private final Set<PhpElement> variableInMoveScope;
+    private final Set<PhpElement> variableUsedInMoveScope;
     private final Set<PhpElement> variableBeforeMoveScope;
     private final Set<PhpElement> variableAfterMoveScope;
+    private final Set<PhpElement> variableAssignedInMoveScope;
 
     private MoveSupport(ElementQuery.Index idx, PHPParseResult result, int offset, OffsetRange offsetRange, FileObject fo) {
         this.result = result;
@@ -117,9 +118,10 @@ public final class MoveSupport {
         this.index = idx;
         initClassElement();
         Model model = ModelFactory.getModel(result);
-        variableInMoveScope = new HashSet<>();
+        variableUsedInMoveScope = new HashSet<>();
         variableBeforeMoveScope = new HashSet<>();
         variableAfterMoveScope = new HashSet<>();
+        variableAssignedInMoveScope = new HashSet<>();
         
         VariableScope variableScope = model.getVariableScope(offsetRange.getStart());
         if (variableScope != null) {
@@ -128,12 +130,12 @@ public final class MoveSupport {
                 FindUsageSupport usageSupport = FindUsageSupport.getInstance(index, varName);
                 Collection<Occurence> occurences = usageSupport.occurences(variableScope.getFileObject());
                 if (occurences != null) {
-                    boolean addToVariableBlock = addToVariableBlock(occurences, offsetRange);
+                    boolean addToVariableUsedBlock = addToVariableUsedBlock(occurences, offsetRange);
                     for (Occurence occurence : occurences) {
                         
                         //Recherche les variables du block move
-                        if (isInBlock(occurence.getOccurenceRange(), offsetRange) && addToVariableBlock) {
-                            variableInMoveScope.add(varName);
+                        if (isInBlock(occurence.getOccurenceRange(), offsetRange) && addToVariableUsedBlock) {
+                            variableUsedInMoveScope.add(varName);
                         }
                         //Recherche les variables avant le block move
                         if (occurence.getOccurenceRange().getEnd() < offsetRange.getStart()) {
@@ -142,6 +144,9 @@ public final class MoveSupport {
                         //Recherche les variables après le block move
                         if (occurence.getOccurenceRange().getStart() > offsetRange.getEnd()) {
                             variableAfterMoveScope.add(varName);
+                        }
+                        if (isInBlock(occurence.getOccurenceRange(), offsetRange) && isAssignedInBlock(occurence, offsetRange)) {
+                            variableAssignedInMoveScope.add(varName);
                         }
                     }
                 }
@@ -283,7 +288,7 @@ public final class MoveSupport {
     public String getParameters() {
         String parameters = "";
         boolean hasParameter = false;
-        for (PhpElement element : variableInMoveScope) {
+        for (PhpElement element : variableUsedInMoveScope) {
             if (variableBeforeMoveScope.contains(element)) {
                 if (hasParameter) {
                   parameters += ", ";
@@ -294,7 +299,82 @@ public final class MoveSupport {
         }
         return parameters;
     }
+    
+    public String getReturnsAssignment() {
+        String returns = "";
+        boolean hasReturns = false;
+        int countReturn = 0;
+        for (PhpElement element : variableAssignedInMoveScope) {
+            if (variableAfterMoveScope.contains(element)) {
+                if (hasReturns) {
+                  returns += ", ";
+                }
+                returns += element.getName();
+                hasReturns = true;
+                countReturn++;
+            }
+        }
+        
+        if (countReturn > 1) {
+            returns = "list(" +returns + ")";
+        }
+        
+        return returns + " = ";
+    }
+    
+    public String getReturns() {
+        String returns = "";
+        boolean hasReturns = false;
+        int countReturn = 0;
+        for (PhpElement element : variableAssignedInMoveScope) {
+            if (variableAfterMoveScope.contains(element)) {
+                if (hasReturns) {
+                  returns += ", ";
+                }
+                returns += element.getName();
+                hasReturns = true;
+                countReturn++;
+            }
+        }
+        
+        if (countReturn > 1) {
+            returns = "array(" +returns + ")";
+        }
+        
+        return "return " + returns + ";";
+    }
 
+    private boolean isAssignedInBlock(Occurence occurence, OffsetRange offsetRange) {
+
+        //Recherche les assignement
+        List<? extends ModelElement> scopeElements = null;
+        for (PhpElement declaration : occurence.getAllDeclarations()) {
+            if (declaration instanceof Scope) {
+                scopeElements = ((Scope) declaration).getElements();
+            }
+            break;
+        }
+        
+        if (scopeElements == null || scopeElements.isEmpty()) {
+            return false;
+        }
+        
+        for (ModelElement scopeElement : scopeElements) {
+            OffsetRange scopeElementRange = scopeElement.getOffsetRange(result);
+            if (isInBlock(scopeElementRange, offsetRange)) {
+                if (scopeElement.getName().startsWith("$")) {
+                    scopeElementRange = new OffsetRange(scopeElementRange.getStart() + 1, scopeElementRange.getEnd());
+                }
+                
+                if(occurence.getOccurenceRange().equals(scopeElementRange)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
     private Occurence getFirstOccuranceInBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
         Occurence firstOccurence = null;
         for (Occurence occurence : occurences) {
@@ -363,8 +443,8 @@ public final class MoveSupport {
         
         return false;
     }
-
-    private boolean addToVariableBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
+    
+    private boolean addToVariableUsedBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
         Occurence firstOccuranceInBlock = getFirstOccuranceInBlock(occurences, offsetRange);
 
         if (firstOccuranceInBlock == null) {

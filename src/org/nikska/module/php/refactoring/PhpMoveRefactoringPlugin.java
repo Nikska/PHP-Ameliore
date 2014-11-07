@@ -182,7 +182,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         
         int classOffsetEnd = usages.getClassDeclaration().getEndOffset() - 1;
         PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
-        String newMethod = getStartNewDeclaration() + text + getEndNewDeclaration();
+        String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
         diffs.add(new Difference(Difference.Kind.INSERT,
                 begin,
                 begin,
@@ -227,7 +227,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     
     private String getUsageNewDeclaration()
     {
-        String newDeclaration = "$this->" + getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
+        String newDeclaration = usages.getReturnsAssignment() + "$this->" + getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
         return newDeclaration;
     }
     
@@ -242,4 +242,10 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         String newDeclaration = "\n}";
         return newDeclaration;
     }
+    
+    private String getReturnDeclaration() {
+        String returns = "\n" + usages.getReturns() + "\n";
+        return returns;
+    }
+            
 }
