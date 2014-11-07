@@ -198,13 +198,6 @@ public final class MoveSupport {
     public FileObject getDeclarationFileObject() {
         return fo;
     }
-    
-    private FileObject getFileObject(Lookup lookup) {
-        Collection<? extends Node> nodes = lookup.lookupAll(Node.class);
-        Node n = (nodes.size() == 1) ? nodes.iterator().next() : null;
-        DataObject dob = (n != null) ? n.getLookup().lookup(DataObject.class) : null;
-        return (dob != null) ? dob.getPrimaryFile() : null;
-    }
 
     public int getOffset() {
         return offset;

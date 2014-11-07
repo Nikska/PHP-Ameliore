@@ -47,6 +47,9 @@ import java.util.Collections;
 import java.util.List;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
+import org.netbeans.api.lexer.Language;
+import org.netbeans.editor.BaseDocument;
+import org.netbeans.editor.Utilities;
 import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
 import org.netbeans.modules.php.editor.model.ModelElement;
@@ -57,6 +60,7 @@ import org.netbeans.modules.refactoring.spi.RefactoringCommit;
 import org.netbeans.modules.refactoring.spi.RefactoringElementsBag;
 import org.netbeans.modules.refactoring.spi.RefactoringPlugin;
 import org.nikska.module.php.refactoring.MoveSupport.Results;
+import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.loaders.DataObjectNotFoundException;
@@ -173,22 +177,52 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
                 bounds.getBegin(),
                 bounds.getEnd(),
                 text,
-                getUsageNewDeclaration(),
-                "New method : " + getRefactoring().getNewName()));
+                reformatNewText(usages.getBegin(), usages.getEnd() - usages.getBegin(), getUsageNewDeclaration()),
+                "Method usage : " + getRefactoring().getNewName() + "(" + usages.getParameters() + ");"));
         
         int classOffsetEnd = usages.getClassDeclaration().getEndOffset() - 1;
         PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
-
+        String newMethod = getStartNewDeclaration() + text + getEndNewDeclaration();
         diffs.add(new Difference(Difference.Kind.INSERT,
                 begin,
                 begin,
                 "",
-                getStartNewDeclaration() + text + getEndNewDeclaration(),
-                "Desc2"));
+                reformatNewText(classOffsetEnd, 0, newMethod),
+                "Methode declaration"));
         
         if (!diffs.isEmpty()) {
             modificationResult.addDifferences(usages.getDeclarationFileObject(), diffs);
         }
+
+    }
+    
+    private String reformatNewText(int offsetBegin, int length, String newText) {
+        
+        try {
+            FileObject file = usages.getDeclarationFileObject();
+            DataObject od = DataObject.find(file);
+            EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
+            if (ec != null) {
+                BaseDocument bdoc = (BaseDocument) ec.openDocument();
+                String mimeType = (String) bdoc.getProperty("mimeType"); //NOI18N
+                BaseDocument newDoc = new BaseDocument(false, mimeType);
+                Language language = (Language) bdoc.getProperty(Language.class);
+                newDoc.putProperty(Language.class, language);
+                newDoc.insertString(0, bdoc.getText(0, bdoc.getLength()), null);
+                
+                if (length > 0) newDoc.remove(offsetBegin, length);
+                newDoc.insertString(offsetBegin, newText, null);
+                int reformatLenght = Utilities.reformat(newDoc, offsetBegin, offsetBegin + newText.length());
+                String reformatedText = newDoc.getText(offsetBegin, reformatLenght);
+                return reformatedText;
+            }
+        } catch (DataObjectNotFoundException ex) {
+            Exceptions.printStackTrace(ex);
+        } catch (IOException | BadLocationException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+        
+        return newText;
     }
     
     private String getUsageNewDeclaration()
@@ -199,13 +233,13 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     
     private String getStartNewDeclaration()
     {
-        String newDeclaration = "\npublic function " + getRefactoring().getNewName()+ "(" + usages.getParameters() + ") {\n";
+        String newDeclaration = "public function " + getRefactoring().getNewName()+ "(" + usages.getParameters() + ") {\n";
         return newDeclaration;
     }
     
     private String getEndNewDeclaration()
     {
-        String newDeclaration = "\n}\n";
+        String newDeclaration = "\n}";
         return newDeclaration;
     }
 }
