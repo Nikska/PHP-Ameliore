@@ -78,9 +78,6 @@ import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
 import org.openide.awt.ActionReferences;
 import org.openide.filesystems.FileObject;
-import org.openide.loaders.DataObject;
-import org.openide.nodes.Node;
-import org.openide.util.Lookup;
 import org.netbeans.modules.php.editor.model.Scope;
 
 /**
@@ -92,16 +89,14 @@ import org.netbeans.modules.php.editor.model.Scope;
 })
 public final class MoveSupport {
 
-    private ASTNode node;
-    private FileObject fo;
     private PhpElementKind kind;
     private ModelElement modelElement;
     private Set<Modifier> modifier;
-    private int offset;
-    private PHPParseResult result;
+    private final int offset;
+    private final PHPParseResult result;
     private final Results results;
     private final OffsetRange offsetRange;
-    private ElementQuery.Index index;
+    private final ElementQuery.Index index;
     private ClassDeclaration classDeclaration;
     private String newName;
     private final Set<PhpElement> variableUsedInMoveScope;
@@ -109,13 +104,13 @@ public final class MoveSupport {
     private final Set<PhpElement> variableAfterMoveScope;
     private final Set<PhpElement> variableAssignedInMoveScope;
 
-    private MoveSupport(ElementQuery.Index idx, PHPParseResult result, int offset, OffsetRange offsetRange, FileObject fo) {
+    private MoveSupport(PHPParseResult result, int offset, OffsetRange offsetRange) {
         this.result = result;
         this.offset = offset;
         this.results = new Results();
-        this.fo = fo;
+        FileObject fo = result.getSnapshot().getSource().getFileObject();
         this.offsetRange = offsetRange;
-        this.index = idx;
+        this.index = ElementQueryFactory.createIndexQuery(QuerySupportFactory.getDependent(fo));
         initClassElement();
         Model model = ModelFactory.getModel(result);
         variableUsedInMoveScope = new HashSet<>();
@@ -162,8 +157,7 @@ public final class MoveSupport {
         return newName;
     }
     
-    private void initClassElement()
-    {
+    private void initClassElement() {
         List<ASTNode> nodes = NavUtils.underCaret(result, offset);
         for (ASTNode node : nodes) {
             if (node instanceof ClassDeclaration && node.getEndOffset() != offset) {
@@ -196,12 +190,8 @@ public final class MoveSupport {
         return modelElement.getName();
     }
 
-    public ASTNode getASTNode() {
-        return node;
-    }
-
     public FileObject getDeclarationFileObject() {
-        return fo;
+        return result.getSnapshot().getSource().getFileObject();
     }
 
     public int getOffset() {
@@ -220,19 +210,9 @@ public final class MoveSupport {
         ModelElement attributeElement = getModelElement();
         return getModifiers(attributeElement);
     }
-
-    private static Occurence findOccurence(final Model model, final OffsetRange offsetRange) {
-        Occurence result = model.getOccurencesSupport(offsetRange).getOccurence();
-        if (result == null) {
-            //result = model.getOccurencesSupport(offset + "$".length()).getOccurence(); //NOI18N
-        }
-        return result;
-    }
     
     public static MoveSupport getInstance(ElementQuery.Index index, final PHPParseResult info, final int offset, OffsetRange offsetRange) {
-        FileObject fileObject = info.getSnapshot().getSource().getFileObject();
-        final Index indexQuery = ElementQueryFactory.createIndexQuery(QuerySupportFactory.getDependent(fileObject));
-        return new MoveSupport(indexQuery, info, offset, offsetRange, fileObject);
+        return new MoveSupport(info, offset, offsetRange);
     }
 
     public ModelElement getModelElement() {

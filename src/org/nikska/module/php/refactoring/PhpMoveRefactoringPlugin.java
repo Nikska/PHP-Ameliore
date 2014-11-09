@@ -89,12 +89,17 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
 
     @NbBundle.Messages({
         "MSG_Error_ElementEmpty=The element name cannot be empty.",
-        "MSG_Error_SameName=The element has the same name as before.",
-        "# {0} - New file name",
-        "MSG_Error_FileExists=The file with name \"{0}\" already exists."
     })
     @Override
     public Problem checkParameters() {
+        String newName = getRefactoring().getNewName();
+        String newType = getRefactoring().getNewType();
+        if (newName != null && newType.equals("Method")) {
+            String trimmedNewName = newName.trim();
+            if (trimmedNewName.length() == 0) {
+                return new Problem(true, Bundle.MSG_Error_ElementEmpty());
+            }
+        }
         return null;
     }
 
@@ -233,7 +238,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     
     private String getStartNewDeclaration()
     {
-        String newDeclaration = "public function " + getRefactoring().getNewName()+ "(" + usages.getParameters() + ") {\n";
+        String newDeclaration = getRefactoring().getModifier() + " function " + getRefactoring().getNewName()+ "(" + usages.getParameters() + ") {\n";
         return newDeclaration;
     }
     

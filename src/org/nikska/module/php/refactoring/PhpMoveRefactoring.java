@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.nikska.module.php.refactoring;
 
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
@@ -15,6 +10,17 @@ import org.openide.util.Lookup;
 public final class PhpMoveRefactoring extends AbstractRefactoring {
 
     private String newName;
+    private String modifier;
+    private String newType;
+
+    public String getModifier() {
+        return modifier;
+    }
+
+    public void setModifier(String modifier) {
+        this.modifier = modifier;
+    }
+
     public PhpMoveRefactoring(Lookup lkp) {
         super(lkp);
     }
@@ -25,6 +31,14 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
     
     public String getNewName() {
         return newName;
+    }
+    
+    public void setNewType(String newType) {
+        this.newType = newType;
+    }
+
+    public String getNewType() {
+        return this.newType;
     }
     
 }

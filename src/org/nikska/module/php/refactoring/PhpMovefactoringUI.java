@@ -58,7 +58,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  *
- * @author Radek Matous
+ * @author Loïc Laverdant
  */
 public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
 
@@ -72,16 +72,6 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
         lookupContent.add(usage);
         this.refactoring = new PhpMoveRefactoring(Lookups.fixed(lookupContent.toArray()));
         this.refactoring.getContext().add(UI.Constants.REQUEST_PREVIEW);
-    }
-
-    static String getElementName(final String name, final ElementKind kind) {
-        String retval = name;
-        if (kind.equals(ElementKind.VARIABLE) || kind.equals(ElementKind.FIELD)) {
-            while (retval.length() > 1 && retval.startsWith("$")) { //NOI18N
-                retval = retval.substring(1);
-            }
-        }
-        return retval;
     }
 
     @Override
@@ -102,7 +92,7 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     @Override
     public CustomRefactoringPanel getPanel(ChangeListener parent) {
         if (panel == null) {
-            panel = new MovePanel(parent, NbBundle.getMessage(MovePanel.class, "LBL_Move"), true, true); //NOI18N
+            panel = new MovePanel(usage.getDeclarationFileObject(), parent, NbBundle.getMessage(MovePanel.class, "LBL_Move")); //NOI18N
         }
 
         return panel;
@@ -110,9 +100,12 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
 
     @Override
     public Problem setParameters() {
-        String newName = panel.getNameValue();
         if (refactoring instanceof PhpMoveRefactoring) {
+            String newName = panel.getNameValue();
+            String modifierName = panel.getModifier();
             ((PhpMoveRefactoring) refactoring).setNewName(newName);
+            ((PhpMoveRefactoring) refactoring).setModifier(modifierName);
+            ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
         }
         return refactoring.checkParameters();
     }
@@ -121,6 +114,8 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     public Problem checkParameters() {
         if (refactoring instanceof PhpMoveRefactoring) {
             ((PhpMoveRefactoring) refactoring).setNewName(panel.getNameValue());
+            ((PhpMoveRefactoring) refactoring).setModifier(panel.getModifier());
+            ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
         }
         return refactoring.checkParameters();
     }
