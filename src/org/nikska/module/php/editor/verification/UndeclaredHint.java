@@ -1,9 +1,19 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.nikska.module.php.editor.verification;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collection;
@@ -37,21 +47,19 @@ import org.netbeans.modules.php.editor.parser.astnodes.visitors.DefaultTreePathV
 import org.netbeans.modules.php.editor.verification.CustomisableRule;
 import org.netbeans.modules.php.editor.verification.HintRule;
 import org.netbeans.modules.php.editor.verification.PHPRuleContext;
-import org.nikska.module.php.editor.verification.Bundle;
 import org.openide.filesystems.FileObject;
 import org.openide.util.NbBundle.Messages;
 
 /**
- *
- * @author nikska
+ * @author Loïc Laverdant
  */
 public class UndeclaredHint extends HintRule implements CustomisableRule {
-    
+
     private static final String HINT_ID = "Undeclared.Function.Hint"; //NOI18N
-    private String CHECK_UNDECLARED_FUNCTION = "php.verification.check.undeclared.function";
-    private Boolean CHECK_UNDECLARED_FUNCTION_DEFAULT = false;
-    private String CHECK_UNDECLARED_CLASS = "php.verification.check.undeclared.class";
-    private Boolean CHECK_UNDECLARED_CLASS_DEFAULT = true;
+    private final String CHECK_UNDECLARED_FUNCTION = "php.verification.check.undeclared.function";
+    private final Boolean CHECK_UNDECLARED_FUNCTION_DEFAULT = false;
+    private final String CHECK_UNDECLARED_CLASS = "php.verification.check.undeclared.class";
+    private final Boolean CHECK_UNDECLARED_CLASS_DEFAULT = true;
     private Preferences preferences;
 
     @Override
@@ -70,12 +78,12 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
     public String getDisplayName() {
         return Bundle.UndeclaredHintDispName();
     }
-    
+
     @Override
     public HintSeverity getDefaultSeverity() {
         return HintSeverity.ERROR;
     }
-    
+
     @Override
     public void setPreferences(Preferences preferences) {
         this.preferences = preferences;
@@ -95,7 +103,7 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
             hints.addAll(undeclaredFunctionFixVisitor.getHints());
         }
     }
-    
+
     @Override
     public JComponent getCustomizer(Preferences preferences) {
         JComponent customizer = new UndeclaredHintCustomizer(preferences, this);
@@ -115,17 +123,17 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
     public void setCheckUndeclaredClass(Preferences preferences, boolean isEnabled) {
         preferences.putBoolean(CHECK_UNDECLARED_CLASS, isEnabled);
     }
-    
+
     public boolean checkUndeclaredClass(Preferences preferences) {
         return preferences.getBoolean(CHECK_UNDECLARED_CLASS, CHECK_UNDECLARED_CLASS_DEFAULT);
     }
 
     private class UndeclaredFunctionFixVisitor extends DefaultTreePathVisitor {
+
         private final FileObject fileObject;
         private final BaseDocument baseDocument;
         private final List<Hint> hints;
         private final Model model;
-        //private IntroduceFix fix;
 
         public UndeclaredFunctionFixVisitor(Model model, FileObject fileObject, BaseDocument baseDocument) {
             this.fileObject = fileObject;
@@ -133,34 +141,28 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
             this.model = model;
             hints = new ArrayList<>();
         }
-        
+
         public List<Hint> getHints() {
             return hints;
         }
-        
+
         private void createHint(ASTNode node, String message, OffsetRange offsetRange) {
             if (showHint(offsetRange, baseDocument)) {
                 hints.add(
                         new Hint(UndeclaredHint.this,
-                        message,
-                        fileObject, offsetRange, 
-                        getHintFix(), 500));
+                                message,
+                                fileObject, offsetRange,
+                                getHintFix(), 500));
             }
         }
-        
+
         private void createHint(ASTNode node, String message) {
             OffsetRange offsetRange = new OffsetRange(node.getStartOffset(), node.getEndOffset());
             createHint(node, message, offsetRange);
         }
-        
+
         private List<HintFix> getHintFix() {
             return null;
-            /*IntroduceFix variableFix = getIntroduceFix();
-            if (variableFix != null) {
-                return Collections.<HintFix>singletonList(variableFix);
-            }
-            
-            return null;*/
         }
 
         @Override
@@ -174,19 +176,13 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
                     ElementQuery.Index index = model.getIndexScope().getIndex();
                     Set<MethodElement> allMethods = ElementFilter.forName(NameKind.exact(methName)).filter(index.getAllMethods(type));
                     if (allMethods.isEmpty()) {
-                        /*assert type != null;
-                        FileObject fileObject = type.getFileObject();
-                        BaseDocument document = fileObject != null ? GsfUtilities.getDocument(fileObject, true) : null;
-                        if (document != null && fileObject.canWrite()) {
-                            fix = new IntroduceMethodFix(document, methodInvocation, type);
-                        }*/
                         createHint(methodInvocation, Bundle.UndeclaredFunctionHintCustom());
                     }
                 }
             }
             super.visit(methodInvocation);
         }
-        
+
         @Override
         @Messages("UndeclaredClassHintCustom=Class seems to be undeclared")
         public void visit(ClassInstanceCreation instanceCreation) {
@@ -200,10 +196,6 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
                 }
                 if (clzName != null && classes.isEmpty()) {
                     createHint(instanceCreation, Bundle.UndeclaredClassHintCustom());
-                    /*ClassElement clz = getIndexedClass(clzName);
-                    if (clz == null) {
-                        fix = IntroduceSuggestion.IntroduceClassFix.getInstance(clzName, model, instanceCreation);
-                    }*/
                 }
             }
             super.visit(instanceCreation);
@@ -216,7 +208,7 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
                 NamespaceName superClass = (NamespaceName) instanceDeclaration.getSuperClass();
                 if (superClass != null && !superClass.getSegments().isEmpty()) {
                     ElementQuery.Index index = model.getIndexScope().getIndex();
-                    
+
                     //Recherche le nom de la superClass
                     Identifier className = superClass.getSegments().get(superClass.getSegments().size() - 1);
                     String clzName = className.getName();
@@ -228,21 +220,17 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
                     }
                     if (clzName != null && classes.isEmpty()) {
                         createHint(superClass, Bundle.UndeclaredClassHintCustom());
-                        /*ClassElement clz = getIndexedClass(clzName);
-                         if (clz == null) {
-                         fix = IntroduceSuggestion.IntroduceClassFix.getInstance(clzName, model, instanceCreation);
-                         }*/
                     }
 
                 }
             }
             super.visit(instanceDeclaration);
         }
-        
+
         public boolean hasText(String input) {
             return input != null && !input.trim().isEmpty();
         }
-        
+
         private ClassElement getIndexedClass(String name) {
             ClassElement retval = null;
             ElementQuery.Index index = model.getIndexScope().getIndex();
@@ -277,203 +265,5 @@ public class UndeclaredHint extends HintRule implements CustomisableRule {
             }
             return retval;
         }
-
-        /**
-         * @return or null
-         */
-        /*public IntroduceFix getIntroduceFix() {
-            return null;//fix;
-        }*/
     }
-
-    /*private static class IntroduceMethodFix extends IntroduceFix {
-        private final TypeScope type;
-        private final PHPCompletionItem.MethodDeclarationItem item;
-        private static final String UNKNOWN_FILE_NAME = "?"; //NOI18N
-
-        public IntroduceMethodFix(BaseDocument doc, MethodInvocation node, TypeScope type) {
-            super(doc, node);
-            this.type = type;
-            this.item = createMethodDeclarationItem(type, node);
-        }
-
-        @Override
-        public void implement() throws Exception {
-            int templateOffset = getOffset();
-            EditList edits = new EditList(doc);
-            edits.replace(templateOffset, 0, "\n" + item.getCustomInsertTemplate(), true, 0); //NOI18N
-            edits.apply();
-            templateOffset = Utilities.getRowEnd(doc, templateOffset + 1);
-            UiUtils.open(type.getFileObject(), Utilities.getRowEnd(doc, templateOffset + 1) - 1);
-        }
-
-        @Override
-        @Messages("UndeclaredFunctionHintMethodDesc=Create Method in Class ()")
-        public String getDescription() {
-            String clsName = type.getName();
-            FileObject fileObject = type.getFileObject();
-            //String fileName = fileObject == null ? UNKNOWN_FILE_NAME : fileObject.getNameExt();
-            //return Bundle.UndeclaredFunctionHintMethodDesc(item.getMethod().asString(BaseFunctionElement.PrintAs.NameAndParamsDeclaration), clsName, fileName);
-            return Bundle.UndeclaredFunctionHintMethodDesc();
-        }
-
-        int getOffset() throws BadLocationException {
-            return UndeclaredFunctionHint.getOffset(doc, type, PhpElementKind.METHOD);
-        }
-    }*/
-
-    /*abstract static class IntroduceFix implements HintFix {
-
-        BaseDocument doc;
-        ASTNode node;
-
-        public IntroduceFix(BaseDocument doc, ASTNode node) {
-            this.doc = doc;
-            this.node = node;
-        }
-
-        OffsetRange getOffsetRange() {
-            return new OffsetRange(node.getStartOffset(), node.getEndOffset());
-        }
-
-        @Override
-        public boolean isInteractive() {
-            return false;
-        }
-
-        @Override
-        public boolean isSafe() {
-            return true;
-        }
-    }*/
-
-    /*private static String getParameters(final List<Expression> parameters) {
-        StringBuilder paramNames = new StringBuilder();
-        for (int i = 0; i < parameters.size(); i++) {
-            Expression expression = parameters.get(i);
-            String varName = null;
-            if (expression instanceof Variable) {
-                varName = CodeUtils.extractVariableName((Variable) expression);
-            }
-            if (varName == null) {
-                varName = String.format("$param%d", i); //NOI18N
-            }
-            if (i > 0) {
-                paramNames.append(", ");
-            }
-            paramNames.append(varName);
-        }
-        return paramNames.toString();
-    }
-
-    private static int getOffset(BaseDocument doc, TypeScope typeScope, PhpElementKind kind) throws BadLocationException {
-        int offset = -1;
-        Collection<ModelElement> elements = new HashSet<>();
-        elements.addAll(typeScope.getDeclaredConstants());
-        switch (kind) {
-            case METHOD:
-                if (typeScope instanceof ClassScope) {
-                    ClassScope clz = (ClassScope) typeScope;
-                    elements.addAll(clz.getDeclaredFields());
-                    elements.addAll(clz.getDeclaredMethods());
-                }
-                break;
-            case FIELD:
-                if ((typeScope instanceof ClassScope)) {
-                    ClassScope clz = (ClassScope) typeScope;
-                    elements.addAll(clz.getDeclaredFields());
-                }
-                break;
-            default:
-                assert false;
-        }
-        int newOffset;
-        for (ModelElement elem : elements) {
-            newOffset = elem.getOffset();
-            if (elem instanceof MethodScope) {
-                newOffset = getOffsetAfterBlockCloseCurly(doc, newOffset);
-            } else {
-                newOffset = getOffsetAfterNextSemicolon(doc, newOffset);
-            }
-            if (newOffset > offset) {
-                offset = newOffset;
-            }
-        }
-        if (offset == -1) {
-            offset = getOffsetAfterClassOpenCurly(doc, typeScope.getOffset());
-        }
-        return offset;
-    }
-
-    private static int getOffsetAfterBlockCloseCurly(BaseDocument doc, int offset) throws BadLocationException {
-        int retval = offset;
-        doc.readLock();
-        try {
-            TokenSequence<? extends PHPTokenId> ts = LexUtilities.getPHPTokenSequence(doc, retval);
-            if (ts != null) {
-                ts.move(retval);
-                int curlyMatch = 0;
-                while (ts.moveNext()) {
-                    Token t = ts.token();
-                    if (t.id() == PHPTokenId.PHP_CURLY_OPEN || t.id() == PHPTokenId.PHP_CURLY_CLOSE) {
-                        if (t.id() == PHPTokenId.PHP_CURLY_OPEN) {
-                            curlyMatch++;
-                        } else if (t.id() == PHPTokenId.PHP_CURLY_CLOSE) {
-                            curlyMatch--;
-                        }
-                        if (curlyMatch == 0) {
-                            ts.moveNext();
-                            retval = ts.offset();
-                            break;
-                        }
-                    }
-                }
-            }
-        } finally {
-            doc.readUnlock();
-        }
-        return retval;
-    }
-
-    private static int getOffsetAfterNextSemicolon(BaseDocument doc, int offset) throws BadLocationException {
-        return getOffsetAfterNextTokenId(doc, offset, PHPTokenId.PHP_SEMICOLON);
-    }
-
-    private static int getOffsetAfterClassOpenCurly(BaseDocument doc, int offset) throws BadLocationException {
-        return getOffsetAfterNextTokenId(doc, offset, PHPTokenId.PHP_CURLY_OPEN);
-    }
-
-    private static int getOffsetAfterNextTokenId(BaseDocument doc, int offset, PHPTokenId tokenId) throws BadLocationException {
-        int retval = offset;
-        doc.readLock();
-        try {
-            TokenSequence<? extends PHPTokenId> ts = LexUtilities.getPHPTokenSequence(doc, retval);
-            if (ts != null) {
-                ts.move(retval);
-                while (ts.moveNext()) {
-                    Token t = ts.token();
-                    if (t.id() == tokenId) {
-                        ts.moveNext();
-                        retval = ts.offset();
-                        break;
-                    }
-                }
-            }
-        } finally {
-            doc.readUnlock();
-        }
-        return retval;
-    }
-
-    /**
-     * Methode utilisé pour générer le code de correctiondes methode NON static
-     */
-    /*private static PHPCompletionItem.MethodDeclarationItem createMethodDeclarationItem(final TypeScope typeScope, final MethodInvocation node) {
-        final String methodName = CodeUtils.extractFunctionName(node.getMethod());
-        final MethodElement method = MethodElementImpl.createMagicMethod(typeScope,
-                methodName, 0, getParameters(node.getMethod().getParameters()));
-        return typeScope.isInterface()
-                ? PHPCompletionItem.MethodDeclarationItem.forIntroduceInterfaceHint(method, null)
-                : PHPCompletionItem.MethodDeclarationItem.forIntroduceHint(method, null);
-    }*/
 }

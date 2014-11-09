@@ -1,43 +1,16 @@
 /*
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
- * Copyright 2010 Oracle and/or its affiliates. All rights reserved.
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
  *
- * Oracle and Java are registered trademarks of Oracle and/or its affiliates.
- * Other names may be trademarks of their respective owners.
- *
- * The contents of this file are subject to the terms of either the GNU
- * General Public License Version 2 only ("GPL") or the Common
- * Development and Distribution License("CDDL") (collectively, the
- * "License"). You may not use this file except in compliance with the
- * License. You can obtain a copy of the License at
- * http://www.netbeans.org/cddl-gplv2.html
- * or nbbuild/licenses/CDDL-GPL-2-CP. See the License for the
- * specific language governing permissions and limitations under the
- * License.  When distributing the software, include this License Header
- * Notice in each file and include the License file at
- * nbbuild/licenses/CDDL-GPL-2-CP.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the GPL Version 2 section of the License file that
- * accompanied this code. If applicable, add the following below the
- * License Header, with the fields enclosed by brackets [] replaced by
- * your own identifying information:
- * "Portions Copyrighted [year] [name of copyright owner]"
- *
- * If you wish your version of this file to be governed by only the CDDL
- * or only the GPL Version 2, indicate your decision by adding
- * "[Contributor] elects to include this software in this distribution
- * under the [CDDL or GPL Version 2] license." If you do not indicate a
- * single choice of license, a recipient has the option to distribute
- * your version of this file under either the CDDL, the GPL Version 2 or
- * to extend the choice of license to its licensees as provided above.
- * However, if you add GPL Version 2 code and therefore, elected the GPL
- * Version 2 license, then the option applies only if the new code is
- * made subject to such option by the copyright holder.
- *
- * Contributor(s):
- *
- * Portions Copyrighted 2008 Sun Microsystems, Inc.
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.nikska.module.php.refactoring;
 
@@ -58,7 +31,6 @@ import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.csl.api.UiUtils;
 import org.netbeans.modules.php.editor.NavUtils;
 import org.netbeans.modules.php.editor.api.ElementQuery;
-import org.netbeans.modules.php.editor.api.ElementQuery.Index;
 import org.netbeans.modules.php.editor.api.ElementQueryFactory;
 import org.netbeans.modules.php.editor.api.PhpElementKind;
 import org.netbeans.modules.php.editor.api.QuerySupportFactory;
@@ -82,7 +54,7 @@ import org.netbeans.modules.php.editor.model.Scope;
 
 /**
  *
- * @author Radek Matous
+ * @author Loïc Laverdant
  */
 @ActionReferences({
     @ActionReference(id = @ActionID(category = "Refactoring", id = "org.nikska.modules.refactoring.api.ui.MoveAction"), path = "Loaders/text/x-php5/Actions", position = 1700)
@@ -117,7 +89,7 @@ public final class MoveSupport {
         variableBeforeMoveScope = new HashSet<>();
         variableAfterMoveScope = new HashSet<>();
         variableAssignedInMoveScope = new HashSet<>();
-        
+
         VariableScope variableScope = model.getVariableScope(offsetRange.getStart());
         if (variableScope != null) {
             Collection<? extends VariableName> declaredVariables = variableScope.getDeclaredVariables();
@@ -127,7 +99,7 @@ public final class MoveSupport {
                 if (occurences != null) {
                     boolean addToVariableUsedBlock = addToVariableUsedBlock(occurences, offsetRange);
                     for (Occurence occurence : occurences) {
-                        
+
                         //Recherche les variables du block move
                         if (isInBlock(occurence.getOccurenceRange(), offsetRange) && addToVariableUsedBlock) {
                             variableUsedInMoveScope.add(varName);
@@ -148,15 +120,15 @@ public final class MoveSupport {
             }
         }
     }
-    
+
     public void setNameName(String newName) {
         this.newName = newName;
     }
-    
+
     public String getNewName() {
         return newName;
     }
-    
+
     private void initClassElement() {
         List<ASTNode> nodes = NavUtils.underCaret(result, offset);
         for (ASTNode node : nodes) {
@@ -165,23 +137,23 @@ public final class MoveSupport {
             }
         }
     }
-    
+
     public ClassDeclaration getClassDeclaration() {
         return classDeclaration;
     }
-    
+
     public PHPParseResult getParseResult() {
         return result;
     }
-    
+
     public int getBegin() {
         return this.offsetRange.getStart();
     }
-    
+
     public int getEnd() {
         return this.offsetRange.getEnd();
     }
-    
+
     void setModelElement(ModelElement modelElement) {
         this.modelElement = modelElement;
     }
@@ -210,7 +182,7 @@ public final class MoveSupport {
         ModelElement attributeElement = getModelElement();
         return getModifiers(attributeElement);
     }
-    
+
     public static MoveSupport getInstance(ElementQuery.Index index, final PHPParseResult info, final int offset, OffsetRange offsetRange) {
         return new MoveSupport(info, offset, offsetRange);
     }
@@ -240,7 +212,7 @@ public final class MoveSupport {
                     retval.add(Modifier.STATIC);
                 }
             }
-           modifier = retval;
+            modifier = retval;
         }
         return modifier;
     }
@@ -271,7 +243,7 @@ public final class MoveSupport {
         for (PhpElement element : variableUsedInMoveScope) {
             if (variableBeforeMoveScope.contains(element)) {
                 if (hasParameter) {
-                  parameters += ", ";
+                    parameters += ", ";
                 }
                 parameters += element.getName();
                 hasParameter = true;
@@ -279,7 +251,7 @@ public final class MoveSupport {
         }
         return parameters;
     }
-    
+
     public String getReturnsAssignment() {
         String returns = "";
         boolean hasReturns = false;
@@ -287,21 +259,21 @@ public final class MoveSupport {
         for (PhpElement element : variableAssignedInMoveScope) {
             if (variableAfterMoveScope.contains(element)) {
                 if (hasReturns) {
-                  returns += ", ";
+                    returns += ", ";
                 }
                 returns += element.getName();
                 hasReturns = true;
                 countReturn++;
             }
         }
-        
+
         if (countReturn > 1) {
-            returns = "list(" +returns + ")";
+            returns = "list(" + returns + ")";
         }
-        
+
         return returns + " = ";
     }
-    
+
     public String getReturns() {
         String returns = "";
         boolean hasReturns = false;
@@ -309,18 +281,18 @@ public final class MoveSupport {
         for (PhpElement element : variableAssignedInMoveScope) {
             if (variableAfterMoveScope.contains(element)) {
                 if (hasReturns) {
-                  returns += ", ";
+                    returns += ", ";
                 }
                 returns += element.getName();
                 hasReturns = true;
                 countReturn++;
             }
         }
-        
+
         if (countReturn > 1) {
-            returns = "array(" +returns + ")";
+            returns = "array(" + returns + ")";
         }
-        
+
         return "return " + returns + ";";
     }
 
@@ -334,49 +306,48 @@ public final class MoveSupport {
             }
             break;
         }
-        
+
         if (scopeElements == null || scopeElements.isEmpty()) {
             return false;
         }
-        
+
         for (ModelElement scopeElement : scopeElements) {
             OffsetRange scopeElementRange = scopeElement.getOffsetRange(result);
             if (isInBlock(scopeElementRange, offsetRange)) {
                 if (scopeElement.getName().startsWith("$")) {
                     scopeElementRange = new OffsetRange(scopeElementRange.getStart() + 1, scopeElementRange.getEnd());
                 }
-                
-                if(occurence.getOccurenceRange().equals(scopeElementRange)) {
+
+                if (occurence.getOccurenceRange().equals(scopeElementRange)) {
                     return true;
                 }
             }
         }
-        
+
         return false;
     }
-    
+
     private Occurence getFirstOccuranceInBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
         Occurence firstOccurence = null;
         for (Occurence occurence : occurences) {
             if (isInBlock(occurence.getOccurenceRange(), offsetRange)) {
-                
+
                 if (firstOccurence == null) {
                     firstOccurence = occurence;
-                }
-                else if (firstOccurence != null && 
-                    !firstOccurence.getOccurenceRange().equals(occurence.getOccurenceRange()) &&
-                    occurence.getOccurenceRange().getEnd() < firstOccurence.getOccurenceRange().getStart()) {
+                } else if (firstOccurence != null
+                        && !firstOccurence.getOccurenceRange().equals(occurence.getOccurenceRange())
+                        && occurence.getOccurenceRange().getEnd() < firstOccurence.getOccurenceRange().getStart()) {
                     firstOccurence = occurence;
                 }
             }
         }
-        
+
         return firstOccurence;
     }
-    
+
     private boolean isInBlock(OffsetRange occurenceRange, OffsetRange blockOffsetRange) {
-        if (occurenceRange.getEnd() > blockOffsetRange.getStart() &&
-            occurenceRange.getStart() < blockOffsetRange.getEnd()) {
+        if (occurenceRange.getEnd() > blockOffsetRange.getStart()
+                && occurenceRange.getStart() < blockOffsetRange.getEnd()) {
             return true;
         }
         return false;
@@ -396,11 +367,11 @@ public final class MoveSupport {
             }
             break;
         }
-        
+
         if (scopeElements == null || scopeElements.isEmpty()) {
             return false;
         }
-        
+
         OffsetRange firstScopeElementRange = null;
         for (ModelElement scopeElement : scopeElements) {
             OffsetRange scopeElementRange = scopeElement.getOffsetRange(result);
@@ -410,20 +381,19 @@ public final class MoveSupport {
                 }
                 if (firstScopeElementRange == null) {
                     firstScopeElementRange = scopeElementRange;
-                }
-                else if(firstScopeElementRange.getStart() > scopeElementRange.getEnd()) {
+                } else if (firstScopeElementRange.getStart() > scopeElementRange.getEnd()) {
                     firstScopeElementRange = scopeElementRange;
                 }
             }
         }
-        
+
         if (firstOccurence.getOccurenceRange().equals(firstScopeElementRange)) {
             return true;
         }
-        
+
         return false;
     }
-    
+
     private boolean addToVariableUsedBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
         Occurence firstOccuranceInBlock = getFirstOccuranceInBlock(occurences, offsetRange);
 
