@@ -18,8 +18,6 @@ import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
 import org.netbeans.editor.BaseDocument;
@@ -65,6 +63,11 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
             newTypeComboBox.setSelectedIndex(newTypeComboBox.getItemCount() - 1);
         }
         this.parserResult = support.getParseResult();
+
+        //Desactivé pour l'instant
+        classNameLabel.setVisible(false);
+        classNameTextField.setVisible(false);
+        fileNameTextField.setEnabled(false);
     }
 
     @Override
@@ -86,7 +89,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
     public String getModifier() {
         return (String) modifierComboBox.getSelectedItem();
     }
-    
+
     public ParserResult getParserResult() {
         return parserResult;
     }
@@ -101,11 +104,11 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
 
         label = new javax.swing.JLabel();
         newTypeComboBox = new javax.swing.JComboBox();
-        jLabel1 = new javax.swing.JLabel();
+        newNameLabel = new javax.swing.JLabel();
         newNameTextField = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jLabel3 = new javax.swing.JLabel();
+        classNameLabel = new javax.swing.JLabel();
+        classNameTextField = new javax.swing.JTextField();
+        modifierLabel = new javax.swing.JLabel();
         modifierComboBox = new javax.swing.JComboBox();
         fileNameBrowseButton = new javax.swing.JButton();
         fileNameTextField = new javax.swing.JTextField();
@@ -116,14 +119,19 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         org.openide.awt.Mnemonics.setLocalizedText(label, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewType")); // NOI18N
 
         newTypeComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Function", "New file" }));
+        newTypeComboBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                newTypeComboBoxActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewName")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(newNameLabel, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewName")); // NOI18N
 
         newNameTextField.setText("methode");
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel2, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_ClassName")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(classNameLabel, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_ClassName")); // NOI18N
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel3, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_Modifier")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(modifierLabel, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_Modifier")); // NOI18N
 
         modifierComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "public", "protected", "private" }));
 
@@ -144,10 +152,10 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel3)
-                            .addComponent(jLabel2)
+                            .addComponent(modifierLabel)
+                            .addComponent(classNameLabel)
                             .addComponent(label)
-                            .addComponent(jLabel1))
+                            .addComponent(newNameLabel))
                         .addGap(67, 67, 67))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(fileNameTextField)
@@ -156,7 +164,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                     .addComponent(fileNameBrowseButton)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(newTypeComboBox, 0, 180, Short.MAX_VALUE)
-                        .addComponent(jTextField1))
+                        .addComponent(classNameTextField))
                     .addComponent(newNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(modifierComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(22, Short.MAX_VALUE))
@@ -170,15 +178,15 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                     .addComponent(newTypeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(classNameLabel)
+                    .addComponent(classNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3)
+                    .addComponent(modifierLabel)
                     .addComponent(modifierComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
+                    .addComponent(newNameLabel)
                     .addComponent(newNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -208,8 +216,8 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                     BaseDocument bdoc = (BaseDocument) ec.openDocument();
                     ParserManager.parseWhenScanFinished(Collections.singleton(Source.create(bdoc)), new UserTask() {
 
-                    @Override
-                    public void run(ResultIterator resultIterator) throws Exception {
+                        @Override
+                        public void run(ResultIterator resultIterator) throws Exception {
                             ParserResult info = (ParserResult) resultIterator.getParserResult();
                             if (info != null) {
                                 parserResult = info;
@@ -218,22 +226,48 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                     });
                 }
             } catch (DataObjectNotFoundException ex) {
-                    Exceptions.printStackTrace(ex);
+                Exceptions.printStackTrace(ex);
             } catch (IOException | ParseException ex) {
                 Exceptions.printStackTrace(ex);
             }
         }
     }//GEN-LAST:event_fileNameBrowseButtonActionPerformed
 
+    private void newTypeComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newTypeComboBoxActionPerformed
+        String selectedItem = (String) newTypeComboBox.getSelectedItem();
+        if (MoveSupport.TYPE_METHOD.equals(selectedItem)) {
+            modifierLabel.setVisible(true);
+            modifierComboBox.setVisible(true);
+            newNameLabel.setVisible(true);
+            newNameTextField.setVisible(true);
+            newNameLabel.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewMethod"));
+            newNameTextField.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewMethodValue"));
+        } else if (MoveSupport.TYPE_FUNCTION.equals(selectedItem)) {
+            modifierLabel.setVisible(false);
+            modifierComboBox.setVisible(false);
+            newNameLabel.setVisible(true);
+            newNameTextField.setVisible(true);
+            newNameLabel.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewFunction"));
+            newNameTextField.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewFunctionValue"));
+        }
+        else {
+            modifierLabel.setVisible(false);
+            modifierComboBox.setVisible(false);
+            newNameLabel.setVisible(false);
+            newNameTextField.setVisible(false);
+        }
+
+    }//GEN-LAST:event_newTypeComboBoxActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel classNameLabel;
+    private javax.swing.JTextField classNameTextField;
     private javax.swing.JButton fileNameBrowseButton;
     private javax.swing.JTextField fileNameTextField;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JTextField jTextField1;
     private javax.swing.JLabel label;
     private javax.swing.JComboBox modifierComboBox;
+    private javax.swing.JLabel modifierLabel;
+    private javax.swing.JLabel newNameLabel;
     private javax.swing.JTextField newNameTextField;
     private javax.swing.JComboBox newTypeComboBox;
     // End of variables declaration//GEN-END:variables

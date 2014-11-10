@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import javax.swing.text.Position;
 import org.netbeans.api.lexer.Language;
 import org.netbeans.editor.BaseDocument;
@@ -152,15 +153,28 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
             Exceptions.printStackTrace(ex);
         }
 
-        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)) {
-            createUsageMethod(bounds, diffs, text);
-            String sourcePath = usages.getSourceFileObject().getPath();
-            String resultPath = getRefactoring().getResultFileObject().getPath();
-            if (!sourcePath.equals(resultPath)) {
-                createNewMethod(ces, resultDiffs, text);
+        switch (getRefactoring().getNewType()) {
+            case MoveSupport.TYPE_METHOD: {
+                createUsageCode(bounds, diffs, text);
+                String sourcePath = usages.getSourceFileObject().getPath();
+                String resultPath = getRefactoring().getResultFileObject().getPath();
+                if (!sourcePath.equals(resultPath)) {
+                    createNewMethod(ces, resultDiffs, text);
+                } else {
+                    createNewMethod(ces, diffs, text);
+                }
+                break;
             }
-            else {
-                createNewMethod(ces, diffs, text);
+            case MoveSupport.TYPE_FUNCTION: {
+                createUsageCode(bounds, diffs, text);
+                String sourcePath = usages.getSourceFileObject().getPath();
+                String resultPath = getRefactoring().getResultFileObject().getPath();
+                if (!sourcePath.equals(resultPath)) {
+                    createNewFunction(ces, resultDiffs, text);
+                } else {
+                    createNewFunction(ces, diffs, text);
+                }
+                break;
             }
         }
 
@@ -172,33 +186,48 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         }
 
     }
-    
-    private void createUsageMethod(PositionBounds bounds, List<Difference> diffs,  String text) {
+
+    private void createUsageCode(PositionBounds bounds, List<Difference> diffs, String text) {
         diffs.add(new Difference(Difference.Kind.CHANGE,
-            bounds.getBegin(),
-            bounds.getEnd(),
-            text,
-            reformatNewText(usages.getSourceFileObject(), usages.getBegin(), usages.getEnd() - usages.getBegin(), getUsageNewDeclaration()),
-            "Method usage : " + getRefactoring().getNewName() + "(" + usages.getParameters() + ");"));
+                bounds.getBegin(),
+                bounds.getEnd(),
+                text,
+                reformatNewText(usages.getSourceFileObject(), usages.getBegin(), usages.getEnd() - usages.getBegin(), getUsageNewDeclaration()),
+                "Usage : " + getRefactoring().getNewName() + "(" + usages.getParameters() + ");"));
     }
-    
+
     private void createNewMethod(CloneableEditorSupport ces, List<Difference> diffs, String text) {
-        
+
         ClassDeclaration classDeclaration = getRefactoring().getClassDeclaration();
         if (classDeclaration != null) {
-            
             int classOffsetEnd = classDeclaration.getEndOffset() - 1;
-            PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
-            String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
-            diffs.add(new Difference(Difference.Kind.INSERT,
-                begin,
-                begin,
-                "",
-                reformatNewText(getRefactoring().getResultFileObject(), classOffsetEnd, 0, newMethod),
-                "Methode declaration"));
+            createNewCode(ces, diffs, classOffsetEnd, text);
         }
     }
 
+    private void createNewFunction(CloneableEditorSupport ces, List<Difference> diffs, String text) {
+
+        Document bdoc = getRefactoring().getParserResult().getSnapshot().getSource().getDocument(true);
+        int offsetEnd = bdoc.getLength();
+
+        createNewCode(ces, diffs, offsetEnd, text);
+    }
+
+    private void createNewCode(CloneableEditorSupport ces, List<Difference> diffs, int offset, String text) {
+
+        PositionRef begin = ces.createPositionRef(offset, Position.Bias.Backward);
+        String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
+        diffs.add(new Difference(Difference.Kind.INSERT,
+                begin,
+                begin,
+                "",
+                reformatNewText(getRefactoring().getResultFileObject(), offset, 0, newMethod),
+                "Moved"));
+    }
+
+    /**
+     * @todo déplacer dans une classe utilitaire
+     */
     private String reformatNewText(FileObject file, int offsetBegin, int length, String newText) {
 
         try {
@@ -230,12 +259,21 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     private String getUsageNewDeclaration() {
-        String newDeclaration = usages.getReturnsAssignment() + "$this->" + getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
+        String newDeclaration = usages.getReturnsAssignment();
+        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)) {
+            newDeclaration += "$this->";
+        }
+        newDeclaration += getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
         return newDeclaration;
     }
 
     private String getStartNewDeclaration() {
-        String newDeclaration = getRefactoring().getModifier() + " function " + getRefactoring().getNewName() + "(" + usages.getParameters() + ") {\n";
+        String newDeclaration = "";
+        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)
+                && !getRefactoring().getModifier().isEmpty()) {
+            newDeclaration = getRefactoring().getModifier() + " ";
+        }
+        newDeclaration += "function " + getRefactoring().getNewName() + "(" + usages.getParameters() + ") {\n";
         return newDeclaration;
     }
 
