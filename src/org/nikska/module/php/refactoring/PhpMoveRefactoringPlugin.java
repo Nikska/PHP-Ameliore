@@ -63,7 +63,8 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     @NbBundle.Messages({
-        "MSG_Error_ElementEmpty=The element name cannot be empty.",})
+        "MSG_Error_ElementEmpty=The element name cannot be empty.",
+    })
     @Override
     public Problem checkParameters() {
         String newName = getRefactoring().getNewName();
@@ -157,7 +158,11 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
             case MoveSupport.TYPE_METHOD: {
                 createUsageCode(bounds, diffs, text);
                 String sourcePath = usages.getSourceFileObject().getPath();
-                String resultPath = getRefactoring().getResultFileObject().getPath();
+                FileObject resultFileObject = getRefactoring().getResultFileObject();
+                String resultPath = sourcePath;
+                if (resultFileObject != null) {
+                    resultPath = getRefactoring().getResultFileObject().getPath();
+                }
                 if (!sourcePath.equals(resultPath)) {
                     createNewMethod(ces, resultDiffs, text);
                 } else {

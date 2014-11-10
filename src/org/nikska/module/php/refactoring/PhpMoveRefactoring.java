@@ -14,7 +14,6 @@
  */
 package org.nikska.module.php.refactoring;
 
-import java.util.Collection;
 import java.util.List;
 import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.csl.spi.ParserResult;
@@ -23,7 +22,6 @@ import org.netbeans.modules.php.editor.model.ClassScope;
 import org.netbeans.modules.php.editor.model.Model;
 import org.netbeans.modules.php.editor.model.ModelUtils;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
-import org.netbeans.modules.php.editor.parser.api.Utils;
 import org.netbeans.modules.php.editor.parser.astnodes.ASTNode;
 import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
@@ -97,7 +95,10 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
     }
 
     public FileObject getResultFileObject() {
-        return parserResult.getSnapshot().getSource().getFileObject();
+        if (parserResult != null) {
+            return parserResult.getSnapshot().getSource().getFileObject();
+        }
+        return null;
     }
 
 }

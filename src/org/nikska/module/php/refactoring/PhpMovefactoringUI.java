@@ -79,18 +79,36 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
             ((PhpMoveRefactoring) refactoring).setNewName(newName);
             ((PhpMoveRefactoring) refactoring).setModifier(modifierName);
             ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
-            ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
+            if (panel.getParserResult() instanceof PHPParseResult) {
+                ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
+            }
         }
         return refactoring.checkParameters();
     }
 
+    @NbBundle.Messages({
+        "MSG_Error_BadFileType=The file must be a valid PHP file.",
+        "MSG_Error_NewNameEmpty=The new name must be not empty."
+    })
     @Override
     public Problem checkParameters() {
         if (refactoring instanceof PhpMoveRefactoring) {
+            String newType = panel.getNewType();
+            if (MoveSupport.TYPE_FUNCTION.equals(newType) || MoveSupport.TYPE_METHOD.equals(newType)) {
+                if (panel.getNameValue().isEmpty()) {
+                    return new Problem(true, Bundle.MSG_Error_NewNameEmpty());
+                }
+            }
             ((PhpMoveRefactoring) refactoring).setNewName(panel.getNameValue());
             ((PhpMoveRefactoring) refactoring).setModifier(panel.getModifier());
             ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
-            ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
+
+            if (panel.getParserResult() instanceof PHPParseResult) {
+                ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
+            } else {
+                return new Problem(true, Bundle.MSG_Error_BadFileType());
+            }
+
         }
         return refactoring.checkParameters();
     }

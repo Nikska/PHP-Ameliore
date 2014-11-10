@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.util.Collections;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import org.netbeans.editor.BaseDocument;
 import org.netbeans.modules.csl.spi.ParserResult;
 import org.netbeans.modules.parsing.api.ParserManager;
@@ -27,6 +29,7 @@ import org.netbeans.modules.parsing.api.ResultIterator;
 import org.netbeans.modules.parsing.api.Source;
 import org.netbeans.modules.parsing.api.UserTask;
 import org.netbeans.modules.parsing.spi.ParseException;
+import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
 import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileChooserBuilder;
@@ -68,6 +71,24 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         classNameLabel.setVisible(false);
         classNameTextField.setVisible(false);
         fileNameTextField.setEnabled(false);
+        
+        newNameTextField.getDocument().addDocumentListener(new DocumentListener() {
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                MovePanel.this.parent.stateChanged(null);
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                MovePanel.this.parent.stateChanged(null);
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                MovePanel.this.parent.stateChanged(null);
+            }
+        });
     }
 
     @Override
@@ -221,6 +242,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                             ParserResult info = (ParserResult) resultIterator.getParserResult();
                             if (info != null) {
                                 parserResult = info;
+                                parent.stateChanged(null);
                             }
                         }
                     });
