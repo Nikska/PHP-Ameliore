@@ -16,11 +16,27 @@ package org.nikska.module.php.refactoring;
 
 import java.awt.Component;
 import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
+import org.netbeans.editor.BaseDocument;
+import org.netbeans.modules.csl.spi.ParserResult;
+import org.netbeans.modules.parsing.api.ParserManager;
+import org.netbeans.modules.parsing.api.ResultIterator;
+import org.netbeans.modules.parsing.api.Source;
+import org.netbeans.modules.parsing.api.UserTask;
+import org.netbeans.modules.parsing.spi.ParseException;
 import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
+import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileChooserBuilder;
 import org.openide.filesystems.FileObject;
+import org.openide.filesystems.FileUtil;
+import org.openide.loaders.DataObject;
+import org.openide.loaders.DataObjectNotFoundException;
+import org.openide.util.Exceptions;
 
 /**
  * Move refactoring parameters panel
@@ -33,16 +49,22 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
     private final transient ChangeListener parent;
     private boolean initialized;
     private final FileObject file;
+    private ParserResult parserResult;
 
     /**
      * Creates new form RenamePanelName
      */
-    public MovePanel(FileObject file, ChangeListener parent, String name) {
+    public MovePanel(MoveSupport support, ChangeListener parent, String name) {
         setName(name);
-        this.file = file;
+        this.file = support.getSourceFileObject();
         this.parent = parent;
         initComponents();
         fileNameTextField.setText(file.getPath());
+        if (support.isInMethod()) {
+            newTypeComboBox.addItem(MoveSupport.TYPE_METHOD);
+            newTypeComboBox.setSelectedIndex(newTypeComboBox.getItemCount() - 1);
+        }
+        this.parserResult = support.getParseResult();
     }
 
     @Override
@@ -63,6 +85,10 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
 
     public String getModifier() {
         return (String) modifierComboBox.getSelectedItem();
+    }
+    
+    public ParserResult getParserResult() {
+        return parserResult;
     }
 
     /**
@@ -89,7 +115,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         org.openide.awt.Mnemonics.setLocalizedText(label, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewType")); // NOI18N
 
-        newTypeComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Method" }));
+        newTypeComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Function", "New file" }));
 
         org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewName")); // NOI18N
 
@@ -172,7 +198,30 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
 
         if (fileChoose != null) {
             fileNameTextField.setText(fileChoose.getAbsolutePath());
+            File copyTarget = new File(fileNameTextField.getText());
+            FileObject fileObject = FileUtil.toFileObject(copyTarget);
+            DataObject od;
+            try {
+                od = DataObject.find(fileObject);
+                EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
+                if (ec != null) {
+                    BaseDocument bdoc = (BaseDocument) ec.openDocument();
+                    ParserManager.parseWhenScanFinished(Collections.singleton(Source.create(bdoc)), new UserTask() {
 
+                    @Override
+                    public void run(ResultIterator resultIterator) throws Exception {
+                            ParserResult info = (ParserResult) resultIterator.getParserResult();
+                            if (info != null) {
+                                parserResult = info;
+                            }
+                        }
+                    });
+                }
+            } catch (DataObjectNotFoundException ex) {
+                    Exceptions.printStackTrace(ex);
+            } catch (IOException | ParseException ex) {
+                Exceptions.printStackTrace(ex);
+            }
         }
     }//GEN-LAST:event_fileNameBrowseButtonActionPerformed
 

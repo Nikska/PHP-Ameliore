@@ -24,8 +24,7 @@ import javax.swing.text.Position.Bias;
 import org.netbeans.editor.BaseDocument;
 import org.netbeans.editor.Utilities;
 import org.netbeans.modules.csl.api.OffsetRange;
-import org.netbeans.modules.php.editor.parser.astnodes.Identifier;
-import org.netbeans.modules.php.editor.parser.astnodes.Variable;
+import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.spi.SimpleRefactoringElementImplementation;
 import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileObject;
@@ -51,11 +50,11 @@ public class MoveElement extends SimpleRefactoringElementImplementation {
 
     private static final Logger LOGGER = Logger.getLogger(MoveElement.class.getName());
 
-    public MoveElement(PositionBounds bounds, String displayText, FileObject parentFile, String name,
+    public MoveElement(PositionBounds bounds, String displayText, PHPParseResult result, String name,
         OffsetRange range, Icon icon) {
         this.bounds = bounds;
         this.displayText = displayText;
-        this.parentFile = parentFile;
+        this.parentFile = result.getSnapshot().getSource().getFileObject();
         this.name = name;
         this.icon = icon;
     }
@@ -94,30 +93,11 @@ public class MoveElement extends SimpleRefactoringElementImplementation {
         return getFile();
     }
 
-
-    public static String extractVariableName(Variable var) {
-        if (var.getName() instanceof Identifier) {
-            Identifier id = (Identifier) var.getName();
-            StringBuilder varName = new StringBuilder();
-
-            if (var.isDollared()) {
-                varName.append("$");
-            }
-
-            varName.append(id.getName());
-            return varName.toString();
-        } else if (var.getName() instanceof Variable) {
-            Variable name = (Variable) var.getName();
-            return extractVariableName(name);
-        }
-
-        return null;
-    }
-
-    public static MoveElement create(String name, FileObject fo,  OffsetRange range, Icon icon) {
+    public static MoveElement create(String name, PHPParseResult parseResult,  OffsetRange range, Icon icon) {
         MoveElement result = null;
         int start = range.getStart();
         int end = range.getEnd();
+        FileObject fo = parseResult.getSnapshot().getSource().getFileObject();
         try {
             DataObject od = DataObject.find(fo);
             EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
@@ -177,7 +157,7 @@ public class MoveElement extends SimpleRefactoringElementImplementation {
                 PositionRef ref2 = ces.createPositionRef(end, Bias.Forward);
                 PositionBounds bounds = new PositionBounds(ref1, ref2);
 
-                result = new MoveElement(bounds, sb.toString().trim(), fo, name, new OffsetRange(start, end), icon);
+                result = new MoveElement(bounds, sb.toString().trim(), parseResult, name, new OffsetRange(start, end), icon);
             }
         } catch (UserQuestionException ex) {
             LOGGER.log(Level.INFO, "Was not possible to obtain document for " + fo.getPath(), ex); //NOI18N

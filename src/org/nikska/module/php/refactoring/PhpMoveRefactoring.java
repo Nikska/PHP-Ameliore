@@ -14,7 +14,20 @@
  */
 package org.nikska.module.php.refactoring;
 
+import java.util.Collection;
+import java.util.List;
+import org.netbeans.modules.csl.api.OffsetRange;
+import org.netbeans.modules.csl.spi.ParserResult;
+import org.netbeans.modules.php.editor.NavUtils;
+import org.netbeans.modules.php.editor.model.ClassScope;
+import org.netbeans.modules.php.editor.model.Model;
+import org.netbeans.modules.php.editor.model.ModelUtils;
+import org.netbeans.modules.php.editor.parser.PHPParseResult;
+import org.netbeans.modules.php.editor.parser.api.Utils;
+import org.netbeans.modules.php.editor.parser.astnodes.ASTNode;
+import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
+import org.openide.filesystems.FileObject;
 import org.openide.util.Lookup;
 
 /**
@@ -26,6 +39,7 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
     private String newName;
     private String modifier;
     private String newType;
+    private ParserResult parserResult;
 
     public String getModifier() {
         return modifier;
@@ -53,6 +67,37 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
 
     public String getNewType() {
         return this.newType;
+    }
+
+    public PHPParseResult getParserResult() {
+        return (PHPParseResult) this.parserResult;
+    }
+    
+    public void setParserResult(PHPParseResult parserResult) {
+        this.parserResult = parserResult;
+    }
+
+    /**
+     * @todo Attention pottentiellement plusieurs classe peuvent etre défini dans un fichier
+     */
+    public ClassDeclaration getClassDeclaration() {
+        Model model = getParserResult().getModel();
+        ClassScope classe = ModelUtils.getFirst(ModelUtils.getDeclaredClasses(model.getFileScope()));
+
+        OffsetRange range = classe.getBlockRange();
+        if (range != null) {
+            List<ASTNode> nodes = NavUtils.underCaret(parserResult, range.getStart());
+            for(ASTNode node : nodes) {
+                if (node instanceof ClassDeclaration) {
+                    return (ClassDeclaration) node;
+                }
+            }
+        }
+        return null;
+    }
+
+    public FileObject getResultFileObject() {
+        return parserResult.getSnapshot().getSource().getFileObject();
     }
 
 }

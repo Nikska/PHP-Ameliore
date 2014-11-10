@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import javax.swing.event.ChangeListener;
+import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
 import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
@@ -64,7 +65,7 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     @Override
     public CustomRefactoringPanel getPanel(ChangeListener parent) {
         if (panel == null) {
-            panel = new MovePanel(usage.getDeclarationFileObject(), parent, NbBundle.getMessage(MovePanel.class, "LBL_Move")); //NOI18N
+            panel = new MovePanel(usage, parent, NbBundle.getMessage(MovePanel.class, "LBL_Move")); //NOI18N
         }
 
         return panel;
@@ -78,6 +79,7 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
             ((PhpMoveRefactoring) refactoring).setNewName(newName);
             ((PhpMoveRefactoring) refactoring).setModifier(modifierName);
             ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
+            ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
         }
         return refactoring.checkParameters();
     }
@@ -88,6 +90,7 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
             ((PhpMoveRefactoring) refactoring).setNewName(panel.getNameValue());
             ((PhpMoveRefactoring) refactoring).setModifier(panel.getModifier());
             ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
+            ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
         }
         return refactoring.checkParameters();
     }

@@ -26,6 +26,7 @@ import org.netbeans.editor.Utilities;
 import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
 import org.netbeans.modules.php.editor.model.ModelElement;
+import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
 import org.netbeans.modules.refactoring.spi.ProgressProviderAdapter;
@@ -66,7 +67,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     public Problem checkParameters() {
         String newName = getRefactoring().getNewName();
         String newType = getRefactoring().getNewType();
-        if (newName != null && newType.equals("Method")) {
+        if (newName != null && newType.equals(MoveSupport.TYPE_METHOD)) {
             String trimmedNewName = newName.trim();
             if (trimmedNewName.length() == 0) {
                 return new Problem(true, Bundle.MSG_Error_ElementEmpty());
@@ -88,8 +89,8 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     public Problem prepare(final RefactoringElementsBag elementsBag) {
         fireProgressListenerStep();
         Results results = usages.getResults();
-        results.addEntry(usages.getDeclarationFileObject());
-        refactorResults(results, elementsBag, usages.getDeclarationFileObject());
+        results.addEntry(usages.getSourceFileObject());
+        refactorResults(results, elementsBag, usages.getSourceFileObject());
         fireProgressListenerStop();
         return null;
     }
@@ -110,7 +111,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
 
         DataObject dob = null;
         try {
-            dob = DataObject.find(usages.getDeclarationFileObject());
+            dob = DataObject.find(usages.getSourceFileObject());
         } catch (DataObjectNotFoundException ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -139,6 +140,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
 
     private void moveDiff(CloneableEditorSupport ces, ModificationResult modificationResult) {
         List<Difference> diffs = new ArrayList<>();
+        List<Difference> resultDiffs = new ArrayList<>();
 
         PositionRef ref1 = ces.createPositionRef(usages.getBegin(), Position.Bias.Forward);
         PositionRef ref2 = ces.createPositionRef(usages.getEnd(), Position.Bias.Forward);
@@ -150,33 +152,56 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
             Exceptions.printStackTrace(ex);
         }
 
-        diffs.add(new Difference(Difference.Kind.CHANGE,
-                bounds.getBegin(),
-                bounds.getEnd(),
-                text,
-                reformatNewText(usages.getBegin(), usages.getEnd() - usages.getBegin(), getUsageNewDeclaration()),
-                "Method usage : " + getRefactoring().getNewName() + "(" + usages.getParameters() + ");"));
-
-        int classOffsetEnd = usages.getClassDeclaration().getEndOffset() - 1;
-        PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
-        String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
-        diffs.add(new Difference(Difference.Kind.INSERT,
-                begin,
-                begin,
-                "",
-                reformatNewText(classOffsetEnd, 0, newMethod),
-                "Methode declaration"));
+        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)) {
+            createUsageMethod(bounds, diffs, text);
+            String sourcePath = usages.getSourceFileObject().getPath();
+            String resultPath = getRefactoring().getResultFileObject().getPath();
+            if (!sourcePath.equals(resultPath)) {
+                createNewMethod(ces, resultDiffs, text);
+            }
+            else {
+                createNewMethod(ces, diffs, text);
+            }
+        }
 
         if (!diffs.isEmpty()) {
-            modificationResult.addDifferences(usages.getDeclarationFileObject(), diffs);
+            modificationResult.addDifferences(usages.getSourceFileObject(), diffs);
+        }
+        if (!resultDiffs.isEmpty()) {
+            modificationResult.addDifferences(getRefactoring().getResultFileObject(), resultDiffs);
         }
 
     }
+    
+    private void createUsageMethod(PositionBounds bounds, List<Difference> diffs,  String text) {
+        diffs.add(new Difference(Difference.Kind.CHANGE,
+            bounds.getBegin(),
+            bounds.getEnd(),
+            text,
+            reformatNewText(usages.getSourceFileObject(), usages.getBegin(), usages.getEnd() - usages.getBegin(), getUsageNewDeclaration()),
+            "Method usage : " + getRefactoring().getNewName() + "(" + usages.getParameters() + ");"));
+    }
+    
+    private void createNewMethod(CloneableEditorSupport ces, List<Difference> diffs, String text) {
+        
+        ClassDeclaration classDeclaration = getRefactoring().getClassDeclaration();
+        if (classDeclaration != null) {
+            
+            int classOffsetEnd = classDeclaration.getEndOffset() - 1;
+            PositionRef begin = ces.createPositionRef(classOffsetEnd, Position.Bias.Backward);
+            String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
+            diffs.add(new Difference(Difference.Kind.INSERT,
+                begin,
+                begin,
+                "",
+                reformatNewText(getRefactoring().getResultFileObject(), classOffsetEnd, 0, newMethod),
+                "Methode declaration"));
+        }
+    }
 
-    private String reformatNewText(int offsetBegin, int length, String newText) {
+    private String reformatNewText(FileObject file, int offsetBegin, int length, String newText) {
 
         try {
-            FileObject file = usages.getDeclarationFileObject();
             DataObject od = DataObject.find(file);
             EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
             if (ec != null) {

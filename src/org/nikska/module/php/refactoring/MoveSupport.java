@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 import javax.swing.Icon;
 import org.netbeans.modules.csl.api.ElementKind;
 import org.netbeans.modules.csl.api.Modifier;
@@ -51,6 +52,7 @@ import org.openide.awt.ActionReference;
 import org.openide.awt.ActionReferences;
 import org.openide.filesystems.FileObject;
 import org.netbeans.modules.php.editor.model.Scope;
+import org.netbeans.modules.php.editor.parser.astnodes.FunctionDeclaration;
 
 /**
  *
@@ -65,7 +67,7 @@ public final class MoveSupport {
     private ModelElement modelElement;
     private Set<Modifier> modifier;
     private final int offset;
-    private final PHPParseResult result;
+    private final PHPParseResult sourceResult;
     private final Results results;
     private final OffsetRange offsetRange;
     private final ElementQuery.Index index;
@@ -75,9 +77,14 @@ public final class MoveSupport {
     private final Set<PhpElement> variableBeforeMoveScope;
     private final Set<PhpElement> variableAfterMoveScope;
     private final Set<PhpElement> variableAssignedInMoveScope;
+    private final List<ASTNode> nodes;
+    
+    public static final String TYPE_METHOD = "Method";
+    public static final String TYPE_FUNCTION = "Function";
+    public static final String TYPE_NEW_FILE = "New File";
 
     private MoveSupport(PHPParseResult result, int offset, OffsetRange offsetRange) {
-        this.result = result;
+        this.sourceResult = result;
         this.offset = offset;
         this.results = new Results();
         FileObject fo = result.getSnapshot().getSource().getFileObject();
@@ -89,6 +96,8 @@ public final class MoveSupport {
         variableBeforeMoveScope = new HashSet<>();
         variableAfterMoveScope = new HashSet<>();
         variableAssignedInMoveScope = new HashSet<>();
+        
+        this.nodes = NavUtils.underCaret(result, offsetRange.getStart());
 
         VariableScope variableScope = model.getVariableScope(offsetRange.getStart());
         if (variableScope != null) {
@@ -130,7 +139,7 @@ public final class MoveSupport {
     }
 
     private void initClassElement() {
-        List<ASTNode> nodes = NavUtils.underCaret(result, offset);
+        List<ASTNode> nodes = NavUtils.underCaret(sourceResult, offset);
         for (ASTNode node : nodes) {
             if (node instanceof ClassDeclaration && node.getEndOffset() != offset) {
                 classDeclaration = (ClassDeclaration) node;
@@ -143,7 +152,7 @@ public final class MoveSupport {
     }
 
     public PHPParseResult getParseResult() {
-        return result;
+        return sourceResult;
     }
 
     public int getBegin() {
@@ -162,8 +171,8 @@ public final class MoveSupport {
         return modelElement.getName();
     }
 
-    public FileObject getDeclarationFileObject() {
-        return result.getSnapshot().getSource().getFileObject();
+    public FileObject getSourceFileObject() {
+        return sourceResult.getSnapshot().getSource().getFileObject();
     }
 
     public int getOffset() {
@@ -312,7 +321,7 @@ public final class MoveSupport {
         }
 
         for (ModelElement scopeElement : scopeElements) {
-            OffsetRange scopeElementRange = scopeElement.getOffsetRange(result);
+            OffsetRange scopeElementRange = scopeElement.getOffsetRange(sourceResult);
             if (isInBlock(scopeElementRange, offsetRange)) {
                 if (scopeElement.getName().startsWith("$")) {
                     scopeElementRange = new OffsetRange(scopeElementRange.getStart() + 1, scopeElementRange.getEnd());
@@ -374,7 +383,7 @@ public final class MoveSupport {
 
         OffsetRange firstScopeElementRange = null;
         for (ModelElement scopeElement : scopeElements) {
-            OffsetRange scopeElementRange = scopeElement.getOffsetRange(result);
+            OffsetRange scopeElementRange = scopeElement.getOffsetRange(sourceResult);
             if (isInBlock(scopeElementRange, offsetRange)) {
                 if (scopeElement.getName().startsWith("$")) {
                     scopeElementRange = new OffsetRange(scopeElementRange.getStart() + 1, scopeElementRange.getEnd());
@@ -424,15 +433,10 @@ public final class MoveSupport {
         private Results() {
         }
 
-        private void clear() {
-            elements.clear();
-        }
-
         public void addEntry(FileObject fileObject) {
             Icon icon = UiUtils.getElementIcon(MoveSupport.this.getElementKind(), Collections.<Modifier>emptyList());
-            MoveElement moveElement = MoveElement.create(
-                    "Name",
-                    fileObject,
+            MoveElement moveElement = MoveElement.create("Name",
+                    sourceResult,
                     new OffsetRange(offsetRange.getStart(), offsetRange.getStart()),
                     icon);
             if (moveElement != null) {
@@ -443,5 +447,23 @@ public final class MoveSupport {
         public Collection<MoveElement> getResultElements() {
             return Collections.unmodifiableCollection(elements);
         }
+    }
+    
+    public boolean isInMethod() {
+        for (ASTNode node : nodes) {
+            if (node instanceof ClassDeclaration && node.getStartOffset() != offsetRange.getStart()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public boolean isInFunction() {
+        for (ASTNode node : nodes) {
+            if (node instanceof FunctionDeclaration && node.getStartOffset() != offsetRange.getStart() && !isInMethod()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
