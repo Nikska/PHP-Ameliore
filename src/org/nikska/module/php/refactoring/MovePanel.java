@@ -22,6 +22,7 @@ import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
 import org.netbeans.editor.BaseDocument;
 import org.netbeans.modules.csl.spi.ParserResult;
 import org.netbeans.modules.parsing.api.ParserManager;
@@ -29,7 +30,6 @@ import org.netbeans.modules.parsing.api.ResultIterator;
 import org.netbeans.modules.parsing.api.Source;
 import org.netbeans.modules.parsing.api.UserTask;
 import org.netbeans.modules.parsing.spi.ParseException;
-import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
 import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileChooserBuilder;
@@ -38,6 +38,7 @@ import org.openide.filesystems.FileUtil;
 import org.openide.loaders.DataObject;
 import org.openide.loaders.DataObjectNotFoundException;
 import org.openide.util.Exceptions;
+import org.openide.util.NbBundle;
 
 /**
  * Move refactoring parameters panel
@@ -61,16 +62,28 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         this.parent = parent;
         initComponents();
         fileNameTextField.setText(file.getPath());
-        if (support.isInMethod()) {
-            newTypeComboBox.addItem(MoveSupport.TYPE_METHOD);
-            newTypeComboBox.setSelectedIndex(newTypeComboBox.getItemCount() - 1);
-        }
-        this.parserResult = support.getParseResult();
-
         //Desactivé pour l'instant
         classNameLabel.setVisible(false);
         classNameTextField.setVisible(false);
+        
         fileNameTextField.setEnabled(false);
+        modifierLabel.setVisible(false);
+        modifierComboBox.setVisible(false);
+        newNameLabel.setText(NbBundle.getMessage(MovePanel.class, "LBL_NewFunction"));
+        newNameTextField.setText(NbBundle.getMessage(MovePanel.class, "LBL_NewFunctionValue"));
+        newTypeComboBox.addItem(MoveSupport.TYPE_FUNCTION);
+        newTypeComboBox.addItem(MoveSupport.TYPE_NEW_FILE);
+        
+        if (support.isInMethod()) {
+            newTypeComboBox.addItem(MoveSupport.TYPE_METHOD);
+            newTypeComboBox.setSelectedIndex(newTypeComboBox.getItemCount() - 1);
+            modifierLabel.setVisible(true);
+            modifierComboBox.setVisible(true);
+            newNameLabel.setText(NbBundle.getMessage(MovePanel.class, "LBL_NewMethod"));
+            newNameTextField.setText(NbBundle.getMessage(MovePanel.class, "LBL_NewMethodValue"));
+        }
+        this.parserResult = support.getParseResult();
+
         
         newNameTextField.getDocument().addDocumentListener(new DocumentListener() {
 
@@ -133,13 +146,13 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         modifierComboBox = new javax.swing.JComboBox();
         fileNameBrowseButton = new javax.swing.JButton();
         fileNameTextField = new javax.swing.JTextField();
+        newFileCheckBox = new javax.swing.JCheckBox();
 
         setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 11, 11));
 
         label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         org.openide.awt.Mnemonics.setLocalizedText(label, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewType")); // NOI18N
 
-        newTypeComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Function", "New file" }));
         newTypeComboBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 newTypeComboBoxActionPerformed(evt);
@@ -165,6 +178,13 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
 
         fileNameTextField.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_Browse_text")); // NOI18N
 
+        org.openide.awt.Mnemonics.setLocalizedText(newFileCheckBox, "New File");
+        newFileCheckBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                newFileCheckBoxActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -182,13 +202,16 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                         .addComponent(fileNameTextField)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(fileNameBrowseButton)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(fileNameBrowseButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(newFileCheckBox))
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(newTypeComboBox, 0, 180, Short.MAX_VALUE)
                         .addComponent(classNameTextField))
                     .addComponent(newNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(modifierComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(22, Short.MAX_VALUE))
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -212,29 +235,50 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(fileNameBrowseButton)
-                    .addComponent(fileNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(fileNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(newFileCheckBox))
                 .addContainerGap(33, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 
     private void fileNameBrowseButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileNameBrowseButtonActionPerformed
-        File fileChoose;
-        fileChoose = new FileChooserBuilder(MovePanel.class.getName())
+        FileChooserBuilder fileBuilder = new FileChooserBuilder(MovePanel.class.getName())
                 .setFilesOnly(true)
                 .setTitle(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_Browser"))
-                .setDefaultWorkingDirectory(new File(fileNameTextField.getText()))
-                .showOpenDialog();
+                .setDefaultWorkingDirectory(new File(fileNameTextField.getText()));
+        File fileChoose;
+        if (!newFileCheckBox.isSelected()) {
+            fileChoose = fileBuilder.showOpenDialog();
+        }
+        else {
+            fileChoose = fileBuilder.showSaveDialog();
+            if (fileChoose != null) {
+                try {
+                    fileChoose.createNewFile();
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            }
+        }
 
         if (fileChoose != null) {
             fileNameTextField.setText(fileChoose.getAbsolutePath());
-            File copyTarget = new File(fileNameTextField.getText());
-            FileObject fileObject = FileUtil.toFileObject(copyTarget);
+            FileObject fileObject = FileUtil.toFileObject(fileChoose);
             DataObject od;
             try {
                 od = DataObject.find(fileObject);
                 EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
                 if (ec != null) {
                     BaseDocument bdoc = (BaseDocument) ec.openDocument();
+                    String selectedType = (String) newTypeComboBox.getSelectedItem();
+                    if (newFileCheckBox.isSelected() && !MoveSupport.TYPE_METHOD.equals(selectedType)) {
+                        try {
+                            bdoc.insertString(0, "<?php\n", null);
+                        } catch (BadLocationException ex) {
+                            Exceptions.printStackTrace(ex);
+                        }
+                    }
+                    
                     ParserManager.parseWhenScanFinished(Collections.singleton(Source.create(bdoc)), new UserTask() {
 
                         @Override
@@ -264,6 +308,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
             newNameTextField.setVisible(true);
             newNameLabel.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewMethod"));
             newNameTextField.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewMethodValue"));
+            newFileCheckBox.setVisible(false);
         } else if (MoveSupport.TYPE_FUNCTION.equals(selectedItem)) {
             modifierLabel.setVisible(false);
             modifierComboBox.setVisible(false);
@@ -271,15 +316,21 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
             newNameTextField.setVisible(true);
             newNameLabel.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewFunction"));
             newNameTextField.setText(org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_NewFunctionValue"));
+            newFileCheckBox.setVisible(true);
         }
         else {
             modifierLabel.setVisible(false);
             modifierComboBox.setVisible(false);
             newNameLabel.setVisible(false);
             newNameTextField.setVisible(false);
+            newFileCheckBox.setVisible(true);
         }
 
     }//GEN-LAST:event_newTypeComboBoxActionPerformed
+
+    private void newFileCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newFileCheckBoxActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_newFileCheckBoxActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel classNameLabel;
@@ -289,6 +340,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
     private javax.swing.JLabel label;
     private javax.swing.JComboBox modifierComboBox;
     private javax.swing.JLabel modifierLabel;
+    private javax.swing.JCheckBox newFileCheckBox;
     private javax.swing.JLabel newNameLabel;
     private javax.swing.JTextField newNameTextField;
     private javax.swing.JComboBox newTypeComboBox;

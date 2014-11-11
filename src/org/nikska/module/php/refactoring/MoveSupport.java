@@ -78,7 +78,7 @@ public final class MoveSupport {
     private final Set<PhpElement> variableAfterMoveScope;
     private final Set<PhpElement> variableAssignedInMoveScope;
     private final List<ASTNode> nodes;
-    
+
     public static final String TYPE_METHOD = "Method";
     public static final String TYPE_FUNCTION = "Function";
     public static final String TYPE_NEW_FILE = "New File";
@@ -96,7 +96,7 @@ public final class MoveSupport {
         variableBeforeMoveScope = new HashSet<>();
         variableAfterMoveScope = new HashSet<>();
         variableAssignedInMoveScope = new HashSet<>();
-        
+
         this.nodes = NavUtils.underCaret(result, offsetRange.getStart());
 
         VariableScope variableScope = model.getVariableScope(offsetRange.getStart());
@@ -130,14 +130,6 @@ public final class MoveSupport {
         }
     }
 
-    public void setNameName(String newName) {
-        this.newName = newName;
-    }
-
-    public String getNewName() {
-        return newName;
-    }
-
     private void initClassElement() {
         List<ASTNode> nodes = NavUtils.underCaret(sourceResult, offset);
         for (ASTNode node : nodes) {
@@ -145,10 +137,6 @@ public final class MoveSupport {
                 classDeclaration = (ClassDeclaration) node;
             }
         }
-    }
-
-    public ClassDeclaration getClassDeclaration() {
-        return classDeclaration;
     }
 
     public PHPParseResult getParseResult() {
@@ -163,79 +151,12 @@ public final class MoveSupport {
         return this.offsetRange.getEnd();
     }
 
-    void setModelElement(ModelElement modelElement) {
-        this.modelElement = modelElement;
-    }
-
-    public String getName() {
-        return modelElement.getName();
-    }
-
     public FileObject getSourceFileObject() {
         return sourceResult.getSnapshot().getSource().getFileObject();
     }
 
-    public int getOffset() {
-        return offset;
-    }
-
-    public PhpElementKind getKind() {
-        return kind;
-    }
-
-    public PhpElementKind getPhpElementKind() {
-        return modelElement.getPhpElementKind();
-    }
-
-    public Set<Modifier> getModifiers() {
-        ModelElement attributeElement = getModelElement();
-        return getModifiers(attributeElement);
-    }
-
     public static MoveSupport getInstance(ElementQuery.Index index, final PHPParseResult info, final int offset, OffsetRange offsetRange) {
         return new MoveSupport(info, offset, offsetRange);
-    }
-
-    public ModelElement getModelElement() {
-        return modelElement;
-    }
-
-    public List<ModelElement> getModelElements() {
-        return new ArrayList<>();
-    }
-
-    private Set<Modifier> getModifiers(ModelElement mElement) {
-        if (modifier == null) {
-            Set<Modifier> retval = Collections.emptySet();
-            if (mElement != null && mElement.getInScope() instanceof TypeScope) {
-                retval = EnumSet.noneOf(Modifier.class);
-                if (mElement.getPhpModifiers().isPrivate()) {
-                    retval.add(Modifier.PRIVATE);
-                } else if (mElement.getPhpModifiers().isProtected()) {
-                    retval.add(Modifier.PROTECTED);
-                }
-                if (mElement.getPhpModifiers().isPublic()) {
-                    retval.add(Modifier.PUBLIC);
-                }
-                if (mElement.getPhpModifiers().isStatic()) {
-                    retval.add(Modifier.STATIC);
-                }
-            }
-            modifier = retval;
-        }
-        return modifier;
-    }
-
-    public static boolean isAlreadyInResults(ASTNode node, Set<ASTNode> results) {
-        OffsetRange newOne = new OffsetRange(node.getStartOffset(), node.getEndOffset());
-        for (Iterator<ASTNode> it = results.iterator(); it.hasNext();) {
-            ASTNode aSTNode = it.next();
-            OffsetRange oldOne = new OffsetRange(aSTNode.getStartOffset(), aSTNode.getEndOffset());
-            if (newOne.containsInclusive(oldOne.getStart()) || oldOne.containsInclusive(newOne.getStart())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private ElementKind getElementKind() {
@@ -246,6 +167,9 @@ public final class MoveSupport {
         return results;
     }
 
+    /**
+     * @todo a deplacer dans une autre classe
+     */
     public String getParameters() {
         String parameters = "";
         boolean hasParameter = false;
@@ -261,6 +185,9 @@ public final class MoveSupport {
         return parameters;
     }
 
+    /**
+     * @todo a deplacer dans une autre classe
+     */
     public String getReturnsAssignment() {
         String returns = "";
         boolean hasReturns = false;
@@ -280,9 +207,16 @@ public final class MoveSupport {
             returns = "list(" + returns + ")";
         }
 
-        return returns + " = ";
+        if (hasReturns) {
+            return returns + " = ";
+        }
+
+        return "";
     }
 
+    /**
+     * @todo a deplacer dans une autre classe
+     */
     public String getReturns() {
         String returns = "";
         boolean hasReturns = false;
@@ -302,7 +236,11 @@ public final class MoveSupport {
             returns = "array(" + returns + ")";
         }
 
-        return "return " + returns + ";";
+        if (hasReturns) {
+            return "return " + returns + ";";
+        }
+
+        return "";
     }
 
     private boolean isAssignedInBlock(Occurence occurence, OffsetRange offsetRange) {
@@ -448,7 +386,7 @@ public final class MoveSupport {
             return Collections.unmodifiableCollection(elements);
         }
     }
-    
+
     public boolean isInMethod() {
         for (ASTNode node : nodes) {
             if (node instanceof ClassDeclaration && node.getStartOffset() != offsetRange.getStart()) {
@@ -457,7 +395,7 @@ public final class MoveSupport {
         }
         return false;
     }
-    
+
     public boolean isInFunction() {
         for (ASTNode node : nodes) {
             if (node instanceof FunctionDeclaration && node.getStartOffset() != offsetRange.getStart() && !isInMethod()) {

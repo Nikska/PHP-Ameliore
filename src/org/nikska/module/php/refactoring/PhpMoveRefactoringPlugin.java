@@ -26,7 +26,6 @@ import org.netbeans.editor.BaseDocument;
 import org.netbeans.editor.Utilities;
 import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
-import org.netbeans.modules.php.editor.model.ModelElement;
 import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
@@ -53,13 +52,10 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
 
     protected AbstractRefactoring refactoring;
     private final MoveSupport usages;
-    private final List<ModelElement> modelElements;
 
     public PhpMoveRefactoringPlugin(PhpMoveRefactoring refactoring) {
         this.refactoring = refactoring;
         this.usages = refactoring.getRefactoringSource().lookup(MoveSupport.class);
-        modelElements = usages.getModelElements();
-        String test = "";
     }
 
     @NbBundle.Messages({
@@ -181,6 +177,15 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
                 }
                 break;
             }
+            case MoveSupport.TYPE_NEW_FILE: {
+                createUsageCode(bounds, diffs, text);
+                String sourcePath = usages.getSourceFileObject().getPath();
+                String resultPath = getRefactoring().getResultFileObject().getPath();
+                if (!sourcePath.equals(resultPath)) {
+                    exportCode(ces, resultDiffs, text);
+                }
+                break;
+            }
         }
 
         if (!diffs.isEmpty()) {
@@ -202,32 +207,35 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     private void createNewMethod(CloneableEditorSupport ces, List<Difference> diffs, String text) {
-
         ClassDeclaration classDeclaration = getRefactoring().getClassDeclaration();
         if (classDeclaration != null) {
             int classOffsetEnd = classDeclaration.getEndOffset() - 1;
-            createNewCode(ces, diffs, classOffsetEnd, text);
+            String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
+            createNewCode(ces, diffs, classOffsetEnd, newMethod);
         }
     }
 
     private void createNewFunction(CloneableEditorSupport ces, List<Difference> diffs, String text) {
-
         Document bdoc = getRefactoring().getParserResult().getSnapshot().getSource().getDocument(true);
         int offsetEnd = bdoc.getLength();
-
-        createNewCode(ces, diffs, offsetEnd, text);
+        String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
+        createNewCode(ces, diffs, offsetEnd, newMethod);
     }
 
     private void createNewCode(CloneableEditorSupport ces, List<Difference> diffs, int offset, String text) {
-
         PositionRef begin = ces.createPositionRef(offset, Position.Bias.Backward);
-        String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
         diffs.add(new Difference(Difference.Kind.INSERT,
                 begin,
                 begin,
                 "",
-                reformatNewText(getRefactoring().getResultFileObject(), offset, 0, newMethod),
+                reformatNewText(getRefactoring().getResultFileObject(), offset, 0, text),
                 "Moved"));
+    }
+    
+    private void exportCode(CloneableEditorSupport ces, List<Difference> resultDiffs, String text) {
+        Document bdoc = getRefactoring().getParserResult().getSnapshot().getSource().getDocument(true);
+        int offsetEnd = bdoc.getLength();
+        createNewCode(ces, resultDiffs, offsetEnd, text);
     }
 
     /**
@@ -265,7 +273,10 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
 
     private String getUsageNewDeclaration() {
         String newDeclaration = usages.getReturnsAssignment();
-        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)) {
+        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_NEW_FILE)) {
+            return "include('" + getRefactoring().getResultFileObject().getPath() + "');";
+        }
+        else if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)) {
             newDeclaration += "$this->";
         }
         newDeclaration += getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
@@ -291,5 +302,8 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         String returns = "\n" + usages.getReturns() + "\n";
         return returns;
     }
+
+
+
 
 }
