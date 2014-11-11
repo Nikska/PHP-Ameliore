@@ -38,6 +38,7 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
     private String modifier;
     private String newType;
     private ParserResult parserResult;
+    private boolean generatePhpDoc;
 
     public String getModifier() {
         return modifier;
@@ -99,6 +100,14 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
             return parserResult.getSnapshot().getSource().getFileObject();
         }
         return null;
+    }
+    
+    public boolean isGeneratePhpDoc() {
+        return generatePhpDoc;
+    }
+
+    void setGeneratePhpDoc(boolean generatePhpDoc) {
+        this.generatePhpDoc = generatePhpDoc;
     }
 
 }

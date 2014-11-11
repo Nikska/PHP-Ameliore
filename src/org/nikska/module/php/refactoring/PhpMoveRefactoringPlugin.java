@@ -59,8 +59,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     @NbBundle.Messages({
-        "MSG_Error_ElementEmpty=The element name cannot be empty.",
-    })
+        "MSG_Error_ElementEmpty=The element name cannot be empty.",})
     @Override
     public Problem checkParameters() {
         String newName = getRefactoring().getNewName();
@@ -202,7 +201,14 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
                 bounds.getBegin(),
                 bounds.getEnd(),
                 text,
-                reformatNewText(usages.getSourceFileObject(), usages.getBegin(), usages.getEnd() - usages.getBegin(), getUsageNewDeclaration()),
+                PhpMoveRefactoringTool.reformatNewText(
+                        usages.getSourceFileObject(),
+                        usages.getBegin(),
+                        usages.getEnd() - usages.getBegin(),
+                        PhpMoveRefactoringTool.getUsageNewDeclaration(
+                                getRefactoring(),
+                                usages.getReturnsAssignment(),
+                                usages.getParameters())),
                 "Usage : " + getRefactoring().getNewName() + "(" + usages.getParameters() + ");"));
     }
 
@@ -210,7 +216,10 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         ClassDeclaration classDeclaration = getRefactoring().getClassDeclaration();
         if (classDeclaration != null) {
             int classOffsetEnd = classDeclaration.getEndOffset() - 1;
-            String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
+            String newMethod = PhpMoveRefactoringTool.getStartNewDeclaration(getRefactoring(), usages.getParameters())
+                    + text
+                    + PhpMoveRefactoringTool.getReturnDeclaration(usages.getReturns())
+                    + PhpMoveRefactoringTool.getEndNewDeclaration();
             createNewCode(ces, diffs, classOffsetEnd, newMethod);
         }
     }
@@ -218,7 +227,10 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     private void createNewFunction(CloneableEditorSupport ces, List<Difference> diffs, String text) {
         Document bdoc = getRefactoring().getParserResult().getSnapshot().getSource().getDocument(true);
         int offsetEnd = bdoc.getLength();
-        String newMethod = getStartNewDeclaration() + text + getReturnDeclaration() + getEndNewDeclaration();
+        String newMethod = PhpMoveRefactoringTool.getStartNewDeclaration(getRefactoring(), usages.getParameters())
+                + text
+                + PhpMoveRefactoringTool.getReturnDeclaration(usages.getReturns())
+                + PhpMoveRefactoringTool.getEndNewDeclaration();
         createNewCode(ces, diffs, offsetEnd, newMethod);
     }
 
@@ -228,82 +240,14 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
                 begin,
                 begin,
                 "",
-                reformatNewText(getRefactoring().getResultFileObject(), offset, 0, text),
+                PhpMoveRefactoringTool.reformatNewText(getRefactoring().getResultFileObject(), offset, 0, text),
                 "Moved"));
     }
-    
+
     private void exportCode(CloneableEditorSupport ces, List<Difference> resultDiffs, String text) {
         Document bdoc = getRefactoring().getParserResult().getSnapshot().getSource().getDocument(true);
         int offsetEnd = bdoc.getLength();
         createNewCode(ces, resultDiffs, offsetEnd, text);
     }
-
-    /**
-     * @todo déplacer dans une classe utilitaire
-     */
-    private String reformatNewText(FileObject file, int offsetBegin, int length, String newText) {
-
-        try {
-            DataObject od = DataObject.find(file);
-            EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
-            if (ec != null) {
-                BaseDocument bdoc = (BaseDocument) ec.openDocument();
-                String mimeType = (String) bdoc.getProperty("mimeType"); //NOI18N
-                BaseDocument newDoc = new BaseDocument(false, mimeType);
-                Language language = (Language) bdoc.getProperty(Language.class);
-                newDoc.putProperty(Language.class, language);
-                newDoc.insertString(0, bdoc.getText(0, bdoc.getLength()), null);
-
-                if (length > 0) {
-                    newDoc.remove(offsetBegin, length);
-                }
-                newDoc.insertString(offsetBegin, newText, null);
-                int reformatLenght = Utilities.reformat(newDoc, offsetBegin, offsetBegin + newText.length());
-                String reformatedText = newDoc.getText(offsetBegin, reformatLenght);
-                return reformatedText;
-            }
-        } catch (DataObjectNotFoundException ex) {
-            Exceptions.printStackTrace(ex);
-        } catch (IOException | BadLocationException ex) {
-            Exceptions.printStackTrace(ex);
-        }
-
-        return newText;
-    }
-
-    private String getUsageNewDeclaration() {
-        String newDeclaration = usages.getReturnsAssignment();
-        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_NEW_FILE)) {
-            return "include('" + getRefactoring().getResultFileObject().getPath() + "');";
-        }
-        else if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)) {
-            newDeclaration += "$this->";
-        }
-        newDeclaration += getRefactoring().getNewName() + "(" + usages.getParameters() + ");";
-        return newDeclaration;
-    }
-
-    private String getStartNewDeclaration() {
-        String newDeclaration = "";
-        if (getRefactoring().getNewType().equals(MoveSupport.TYPE_METHOD)
-                && !getRefactoring().getModifier().isEmpty()) {
-            newDeclaration = getRefactoring().getModifier() + " ";
-        }
-        newDeclaration += "function " + getRefactoring().getNewName() + "(" + usages.getParameters() + ") {\n";
-        return newDeclaration;
-    }
-
-    private String getEndNewDeclaration() {
-        String newDeclaration = "\n}";
-        return newDeclaration;
-    }
-
-    private String getReturnDeclaration() {
-        String returns = "\n" + usages.getReturns() + "\n";
-        return returns;
-    }
-
-
-
 
 }

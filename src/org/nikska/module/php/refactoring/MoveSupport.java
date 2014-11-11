@@ -14,17 +14,13 @@
  */
 package org.nikska.module.php.refactoring;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Logger;
 import javax.swing.Icon;
 import org.netbeans.modules.csl.api.ElementKind;
 import org.netbeans.modules.csl.api.Modifier;
@@ -41,7 +37,6 @@ import org.netbeans.modules.php.editor.model.Model;
 import org.netbeans.modules.php.editor.model.ModelElement;
 import org.netbeans.modules.php.editor.model.ModelFactory;
 import org.netbeans.modules.php.editor.model.Occurence;
-import org.netbeans.modules.php.editor.model.TypeScope;
 import org.netbeans.modules.php.editor.model.VariableName;
 import org.netbeans.modules.php.editor.model.VariableScope;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
@@ -63,16 +58,10 @@ import org.netbeans.modules.php.editor.parser.astnodes.FunctionDeclaration;
 })
 public final class MoveSupport {
 
-    private PhpElementKind kind;
-    private ModelElement modelElement;
-    private Set<Modifier> modifier;
-    private final int offset;
     private final PHPParseResult sourceResult;
     private final Results results;
     private final OffsetRange offsetRange;
     private final ElementQuery.Index index;
-    private ClassDeclaration classDeclaration;
-    private String newName;
     private final Set<PhpElement> variableUsedInMoveScope;
     private final Set<PhpElement> variableBeforeMoveScope;
     private final Set<PhpElement> variableAfterMoveScope;
@@ -85,12 +74,11 @@ public final class MoveSupport {
 
     private MoveSupport(PHPParseResult result, int offset, OffsetRange offsetRange) {
         this.sourceResult = result;
-        this.offset = offset;
         this.results = new Results();
         FileObject fo = result.getSnapshot().getSource().getFileObject();
         this.offsetRange = offsetRange;
         this.index = ElementQueryFactory.createIndexQuery(QuerySupportFactory.getDependent(fo));
-        initClassElement();
+
         Model model = ModelFactory.getModel(result);
         variableUsedInMoveScope = new HashSet<>();
         variableBeforeMoveScope = new HashSet<>();
@@ -130,15 +118,6 @@ public final class MoveSupport {
         }
     }
 
-    private void initClassElement() {
-        List<ASTNode> nodes = NavUtils.underCaret(sourceResult, offset);
-        for (ASTNode node : nodes) {
-            if (node instanceof ClassDeclaration && node.getEndOffset() != offset) {
-                classDeclaration = (ClassDeclaration) node;
-            }
-        }
-    }
-
     public PHPParseResult getParseResult() {
         return sourceResult;
     }
@@ -170,77 +149,36 @@ public final class MoveSupport {
     /**
      * @todo a deplacer dans une autre classe
      */
-    public String getParameters() {
-        String parameters = "";
-        boolean hasParameter = false;
+    public Set<PhpElement> getParameters() {
+        Set<PhpElement> elements = new HashSet<>();
         for (PhpElement element : variableUsedInMoveScope) {
             if (variableBeforeMoveScope.contains(element)) {
-                if (hasParameter) {
-                    parameters += ", ";
-                }
-                parameters += element.getName();
-                hasParameter = true;
+                elements.add(element);
             }
         }
-        return parameters;
+        return elements;
     }
 
-    /**
-     * @todo a deplacer dans une autre classe
-     */
-    public String getReturnsAssignment() {
-        String returns = "";
-        boolean hasReturns = false;
-        int countReturn = 0;
+    public Set<PhpElement> getReturnsAssignment() {
+        Set<PhpElement> elements = new HashSet<>();
         for (PhpElement element : variableAssignedInMoveScope) {
             if (variableAfterMoveScope.contains(element)) {
-                if (hasReturns) {
-                    returns += ", ";
-                }
-                returns += element.getName();
-                hasReturns = true;
-                countReturn++;
+                elements.add(element);
             }
         }
 
-        if (countReturn > 1) {
-            returns = "list(" + returns + ")";
-        }
-
-        if (hasReturns) {
-            return returns + " = ";
-        }
-
-        return "";
+        return elements;
     }
-
-    /**
-     * @todo a deplacer dans une autre classe
-     */
-    public String getReturns() {
-        String returns = "";
-        boolean hasReturns = false;
-        int countReturn = 0;
+    
+    public Set<PhpElement> getReturns() {
+        Set<PhpElement> elements = new HashSet<>();
         for (PhpElement element : variableAssignedInMoveScope) {
             if (variableAfterMoveScope.contains(element)) {
-                if (hasReturns) {
-                    returns += ", ";
-                }
-                returns += element.getName();
-                hasReturns = true;
-                countReturn++;
+                elements.add(element);
             }
         }
 
-        if (countReturn > 1) {
-            returns = "array(" + returns + ")";
-        }
-
-        if (hasReturns) {
-            return "return " + returns + ";";
-        }
-
-        return "";
+        return elements;
     }
 
     private boolean isAssignedInBlock(Occurence occurence, OffsetRange offsetRange) {

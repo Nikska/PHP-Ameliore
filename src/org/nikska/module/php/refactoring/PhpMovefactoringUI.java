@@ -74,13 +74,13 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     @Override
     public Problem setParameters() {
         if (refactoring instanceof PhpMoveRefactoring) {
-            String newName = panel.getNameValue();
-            String modifierName = panel.getModifier();
-            ((PhpMoveRefactoring) refactoring).setNewName(newName);
-            ((PhpMoveRefactoring) refactoring).setModifier(modifierName);
-            ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
+            PhpMoveRefactoring phpMoveRefactoring = (PhpMoveRefactoring) refactoring;
+            phpMoveRefactoring.setNewName(panel.getNameValue());
+            phpMoveRefactoring.setModifier(panel.getModifier());
+            phpMoveRefactoring.setNewType(panel.getNewType());
+            phpMoveRefactoring.setGeneratePhpDoc(panel.getGeneratePhpDoc());
             if (panel.getParserResult() instanceof PHPParseResult) {
-                ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
+                phpMoveRefactoring.setParserResult((PHPParseResult) panel.getParserResult());
             }
         }
         return refactoring.checkParameters();
@@ -92,20 +92,15 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     })
     @Override
     public Problem checkParameters() {
-        if (refactoring instanceof PhpMoveRefactoring) {
+        if (refactoring instanceof PhpMoveRefactoring && panel != null) {
             String newType = panel.getNewType();
             if (MoveSupport.TYPE_FUNCTION.equals(newType) || MoveSupport.TYPE_METHOD.equals(newType)) {
                 if (panel.getNameValue().isEmpty()) {
                     return new Problem(true, Bundle.MSG_Error_NewNameEmpty());
                 }
             }
-            ((PhpMoveRefactoring) refactoring).setNewName(panel.getNameValue());
-            ((PhpMoveRefactoring) refactoring).setModifier(panel.getModifier());
-            ((PhpMoveRefactoring) refactoring).setNewType(panel.getNewType());
 
-            if (panel.getParserResult() instanceof PHPParseResult) {
-                ((PhpMoveRefactoring) refactoring).setParserResult((PHPParseResult) panel.getParserResult());
-            } else {
+            if (!(panel.getParserResult() instanceof PHPParseResult)) {
                 return new Problem(true, Bundle.MSG_Error_BadFileType());
             }
 
