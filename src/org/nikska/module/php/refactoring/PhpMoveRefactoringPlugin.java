@@ -21,9 +21,6 @@ import java.util.List;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.Position;
-import org.netbeans.api.lexer.Language;
-import org.netbeans.editor.BaseDocument;
-import org.netbeans.editor.Utilities;
 import org.netbeans.modules.csl.spi.support.ModificationResult;
 import org.netbeans.modules.csl.spi.support.ModificationResult.Difference;
 import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
@@ -34,7 +31,6 @@ import org.netbeans.modules.refactoring.spi.RefactoringCommit;
 import org.netbeans.modules.refactoring.spi.RefactoringElementsBag;
 import org.netbeans.modules.refactoring.spi.RefactoringPlugin;
 import org.nikska.module.php.refactoring.MoveSupport.Results;
-import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.loaders.DataObjectNotFoundException;
@@ -216,7 +212,11 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         ClassDeclaration classDeclaration = getRefactoring().getClassDeclaration();
         if (classDeclaration != null) {
             int classOffsetEnd = classDeclaration.getEndOffset() - 1;
-            String newMethod = PhpMoveRefactoringTool.getStartNewDeclaration(getRefactoring(), usages.getParameters())
+            String newMethod = "";
+            if (getRefactoring().isGeneratePhpDoc()) {
+                newMethod += PhpMoveRefactoringTool.getPhpDoc(getRefactoring(), usages.getParameters(), usages.getReturns());
+            }
+            newMethod += PhpMoveRefactoringTool.getStartNewDeclaration(getRefactoring(), usages.getParameters())
                     + text
                     + PhpMoveRefactoringTool.getReturnDeclaration(usages.getReturns())
                     + PhpMoveRefactoringTool.getEndNewDeclaration();
@@ -227,7 +227,11 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     private void createNewFunction(CloneableEditorSupport ces, List<Difference> diffs, String text) {
         Document bdoc = getRefactoring().getParserResult().getSnapshot().getSource().getDocument(true);
         int offsetEnd = bdoc.getLength();
-        String newMethod = PhpMoveRefactoringTool.getStartNewDeclaration(getRefactoring(), usages.getParameters())
+        String newMethod = "";
+        if (getRefactoring().isGeneratePhpDoc()) {
+            newMethod += PhpMoveRefactoringTool.getPhpDoc(getRefactoring(), usages.getParameters(), usages.getReturns());
+        }
+        newMethod += PhpMoveRefactoringTool.getStartNewDeclaration(getRefactoring(), usages.getParameters())
                 + text
                 + PhpMoveRefactoringTool.getReturnDeclaration(usages.getReturns())
                 + PhpMoveRefactoringTool.getEndNewDeclaration();

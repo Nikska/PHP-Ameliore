@@ -29,7 +29,6 @@ import org.netbeans.modules.csl.api.UiUtils;
 import org.netbeans.modules.php.editor.NavUtils;
 import org.netbeans.modules.php.editor.api.ElementQuery;
 import org.netbeans.modules.php.editor.api.ElementQueryFactory;
-import org.netbeans.modules.php.editor.api.PhpElementKind;
 import org.netbeans.modules.php.editor.api.QuerySupportFactory;
 import org.netbeans.modules.php.editor.api.elements.PhpElement;
 import org.netbeans.modules.php.editor.model.FindUsageSupport;
@@ -219,8 +218,7 @@ public final class MoveSupport {
 
                 if (firstOccurence == null) {
                     firstOccurence = occurence;
-                } else if (firstOccurence != null
-                        && !firstOccurence.getOccurenceRange().equals(occurence.getOccurenceRange())
+                } else if (!firstOccurence.getOccurenceRange().equals(occurence.getOccurenceRange())
                         && occurence.getOccurenceRange().getEnd() < firstOccurence.getOccurenceRange().getStart()) {
                     firstOccurence = occurence;
                 }
@@ -231,11 +229,8 @@ public final class MoveSupport {
     }
 
     private boolean isInBlock(OffsetRange occurenceRange, OffsetRange blockOffsetRange) {
-        if (occurenceRange.getEnd() > blockOffsetRange.getStart()
-                && occurenceRange.getStart() < blockOffsetRange.getEnd()) {
-            return true;
-        }
-        return false;
+        return occurenceRange.getEnd() > blockOffsetRange.getStart()
+                && occurenceRange.getStart() < blockOffsetRange.getEnd();
     }
 
     private boolean isFirstOccuranceAssignment(Collection<Occurence> occurences, OffsetRange offsetRange) {
@@ -272,11 +267,7 @@ public final class MoveSupport {
             }
         }
 
-        if (firstOccurence.getOccurenceRange().equals(firstScopeElementRange)) {
-            return true;
-        }
-
-        return false;
+        return firstOccurence.getOccurenceRange().equals(firstScopeElementRange);
     }
 
     private boolean addToVariableUsedBlock(Collection<Occurence> occurences, OffsetRange offsetRange) {
