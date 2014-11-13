@@ -94,6 +94,7 @@ public class PhpMoveRefactoringTool {
             case MoveSupport.TYPE_NEW_FILE:
                 return "include('" + refactoring.getResultFileObject().getPath() + "');";
             case MoveSupport.TYPE_METHOD:
+            case MoveSupport.TYPE_PARENT_METHOD:
                 newDeclaration += "$this->";
                 break;
         }
@@ -136,7 +137,8 @@ public class PhpMoveRefactoringTool {
     public static String getStartNewDeclaration(PhpMoveRefactoring refactoring, Set<PhpElement> parameters) {
         String newDeclaration = "";
 
-        if (refactoring.getNewType().equals(MoveSupport.TYPE_METHOD)
+        if ((refactoring.getNewType().equals(MoveSupport.TYPE_METHOD) ||
+                refactoring.getNewType().equals(MoveSupport.TYPE_METHOD))
                 && !refactoring.getModifier().isEmpty()) {
             newDeclaration = refactoring.getModifier() + " ";
         }

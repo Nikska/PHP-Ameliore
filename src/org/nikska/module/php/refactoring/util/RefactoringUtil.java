@@ -14,15 +14,21 @@
  */
 package org.nikska.module.php.refactoring.util;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.php.editor.NavUtils;
+import org.netbeans.modules.php.editor.api.ElementQuery;
+import org.netbeans.modules.php.editor.api.NameKind;
+import org.netbeans.modules.php.editor.api.elements.ClassElement;
 import org.netbeans.modules.php.editor.model.ClassScope;
 import org.netbeans.modules.php.editor.model.Model;
+import org.netbeans.modules.php.editor.model.ModelFactory;
 import org.netbeans.modules.php.editor.model.ModelUtils;
-import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.php.editor.parser.astnodes.ASTNode;
 import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
+import org.netbeans.modules.php.editor.parser.PHPParseResult;
 
 /**
  * @author Loïc Laverdant
@@ -45,4 +51,34 @@ public class RefactoringUtil {
         }
         return null;
     }
+    
+    public static Set<ClassElement> getSuperClasses(PHPParseResult parserResult, OffsetRange offsetRange) {
+        List<ASTNode> nodes = NavUtils.underCaret(parserResult, offsetRange.getStart());
+        Set<ClassElement> classes = new HashSet<>();
+
+        for (ASTNode node : nodes) {
+            if (node instanceof ClassDeclaration && node.getStartOffset() != offsetRange.getStart()) {
+                ClassDeclaration classDeclaration = (ClassDeclaration) node;
+                classes.addAll(getSuperClasses(parserResult, classDeclaration.getName().getName()));
+            }
+        }
+        return classes;
+    }
+    
+    public static Set<ClassElement> getSuperClasses(PHPParseResult parserResult, String className) {
+        Set<ClassElement> classes = new HashSet<>();
+        Model model = ModelFactory.getModel(parserResult);
+        ElementQuery.Index index = model.getIndexScope().getIndex();
+        ClassElement classElement = ModelUtils.getFirst(index.getClasses(NameKind.exact(className)));
+
+        if (classElement !=null && classElement.getSuperClassName() != null) {
+            String superClassName = classElement.getSuperClassName().getName();
+            ClassElement superClassElement = ModelUtils.getFirst(index.getClasses(NameKind.exact(superClassName)));
+            classes.add(superClassElement);
+            classes.addAll(getSuperClasses(parserResult, superClassName));
+        }
+
+        return classes;
+    }
+    
 }

@@ -147,7 +147,8 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
         }
 
         switch (getRefactoring().getNewType()) {
-            case MoveSupport.TYPE_METHOD: {
+            case MoveSupport.TYPE_METHOD : 
+            case MoveSupport.TYPE_PARENT_METHOD : {
                 createUsageCode(bounds, diffs, text);
                 String sourcePath = usages.getSourceFileObject().getPath();
                 FileObject resultFileObject = getRefactoring().getResultFileObject();

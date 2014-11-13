@@ -18,19 +18,29 @@ import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Set;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import org.netbeans.editor.BaseDocument;
+import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.csl.spi.ParserResult;
 import org.netbeans.modules.parsing.api.ParserManager;
 import org.netbeans.modules.parsing.api.ResultIterator;
 import org.netbeans.modules.parsing.api.Source;
 import org.netbeans.modules.parsing.api.UserTask;
 import org.netbeans.modules.parsing.spi.ParseException;
+import org.netbeans.modules.php.editor.api.ElementQuery;
+import org.netbeans.modules.php.editor.api.NameKind;
+import org.netbeans.modules.php.editor.api.elements.ClassElement;
+import org.netbeans.modules.php.editor.model.Model;
+import org.netbeans.modules.php.editor.model.ModelFactory;
+import org.netbeans.modules.php.editor.model.ModelUtils;
+import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
+import org.nikska.module.php.refactoring.util.RefactoringUtil;
 import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileChooserBuilder;
 import org.openide.filesystems.FileObject;
@@ -47,16 +57,19 @@ import org.openide.util.NbBundle;
  */
 public class MovePanel extends JPanel implements CustomRefactoringPanel {
 
+    private static final long serialVersionUID = 1L;
+
     //private final transient String oldName;
     private final transient ChangeListener parent;
     private boolean initialized;
     private final FileObject file;
     private ParserResult parserResult;
+    private final PHPParseResult parserSource;
 
     /**
      * Creates new form RenamePanelName
      */
-    public MovePanel(MoveSupport support, ChangeListener parent, String name) {
+    public MovePanel(MoveSupport support, ChangeListener parent, OffsetRange offsetRange, String name) {
         setName(name);
         this.file = support.getSourceFileObject();
         this.parent = parent;
@@ -66,13 +79,20 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         newTypeComboBox.addItem(MoveSupport.TYPE_FUNCTION);
         newTypeComboBox.addItem(MoveSupport.TYPE_NEW_FILE);
         newTypeComboBox.setSelectedIndex(0);
-        
+        parserSource = support.getParseResult();
+        parserResult = support.getParseResult();
+
+        Set<ClassElement> classes = RefactoringUtil.getSuperClasses((PHPParseResult) parserSource, offsetRange);
+        for (ClassElement classElement : classes) {
+            classNameComboBox.addItem(classElement.getName());
+        }
+
         if (support.isInMethod()) {
+            newTypeComboBox.addItem(MoveSupport.TYPE_PARENT_METHOD);
             newTypeComboBox.addItem(MoveSupport.TYPE_METHOD);
             newTypeComboBox.setSelectedIndex(newTypeComboBox.getItemCount() - 1);
         }
-        
-        parserResult = support.getParseResult();
+
         newNameTextField.getDocument().addDocumentListener(new DocumentListener() {
 
             @Override
@@ -90,27 +110,45 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                 MovePanel.this.parent.stateChanged(null);
             }
         });
-        
+
         configureForm();
     }
-    
+
     private void configureForm() {
-        
+
         //Desactivé pour l'instant
         classNameLabel.setVisible(false);
-        classNameTextField.setVisible(false);
-        
+        classNameComboBox.setVisible(false);
+        fileNameTextField.setVisible(true);
+        fileNameBrowseButton.setVisible(true);
+
         String selectedItem = (String) newTypeComboBox.getSelectedItem();
-        if (MoveSupport.TYPE_METHOD.equals(selectedItem)) {
-            configureFormForMethod();
-        } else if (MoveSupport.TYPE_FUNCTION.equals(selectedItem)) {
-            configureFormForFunction();
-        }
-        else {
-            configureFormForElse();
+        if (null != selectedItem) {
+            switch (selectedItem) {
+                case MoveSupport.TYPE_METHOD:
+                    configureFormForMethod();
+                    break;
+                case MoveSupport.TYPE_PARENT_METHOD:
+                    configureFormForParentMethod();
+                    break;
+                case MoveSupport.TYPE_FUNCTION:
+                    configureFormForFunction();
+                    break;
+                default:
+                    configureFormForElse();
+                    break;
+            }
         }
     }
-    
+
+    private void configureFormForParentMethod() {
+        configureFormForMethod();
+        classNameComboBox.setVisible(true);
+        classNameLabel.setVisible(true);
+        fileNameTextField.setVisible(false);
+        fileNameBrowseButton.setVisible(false);
+    }
+
     private void configureFormForMethod() {
         modifierLabel.setVisible(true);
         modifierComboBox.setVisible(true);
@@ -121,7 +159,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         newFileCheckBox.setVisible(false);
         generatePhpDocCheckBox.setVisible(true);
     }
-    
+
     private void configureFormForFunction() {
         modifierLabel.setVisible(false);
         modifierComboBox.setVisible(false);
@@ -132,7 +170,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         newFileCheckBox.setVisible(true);
         generatePhpDocCheckBox.setVisible(true);
     }
-    
+
     private void configureFormForElse() {
         modifierLabel.setVisible(false);
         modifierComboBox.setVisible(false);
@@ -141,7 +179,6 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         newFileCheckBox.setVisible(true);
         generatePhpDocCheckBox.setVisible(false);
     }
-            
 
     @Override
     public void initialize() {
@@ -166,32 +203,39 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
     public ParserResult getParserResult() {
         return parserResult;
     }
-    
-    private void parseChoosedFile(FileObject fileObject) throws DataObjectNotFoundException, IOException, ParseException {
-        DataObject od = DataObject.find(fileObject);
-        EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
-        if (ec != null) {
-            BaseDocument bdoc = (BaseDocument) ec.openDocument();
-            String selectedType = (String) newTypeComboBox.getSelectedItem();
-            if (newFileCheckBox.isSelected() && !MoveSupport.TYPE_METHOD.equals(selectedType)) {
-                try {
-                    bdoc.insertString(0, "<?php\n", null);
-                } catch (BadLocationException ex) {
-                    Exceptions.printStackTrace(ex);
-                }
-            }
 
-            ParserManager.parseWhenScanFinished(Collections.singleton(Source.create(bdoc)), new UserTask() {
+    private void parseChoosedFile(FileObject fileObject) {
 
-                @Override
-                public void run(ResultIterator resultIterator) throws Exception {
-                    ParserResult info = (ParserResult) resultIterator.getParserResult();
-                    if (info != null) {
-                        parserResult = info;
-                        parent.stateChanged(null);
+        try {
+            DataObject od = DataObject.find(fileObject);
+            EditorCookie ec = od.getLookup().lookup(EditorCookie.class);
+            if (ec != null) {
+                BaseDocument bdoc = (BaseDocument) ec.openDocument();
+                String selectedType = (String) newTypeComboBox.getSelectedItem();
+                if (newFileCheckBox.isSelected() && !MoveSupport.TYPE_METHOD.equals(selectedType)) {
+                    try {
+                        bdoc.insertString(0, "<?php\n", null);
+                    } catch (BadLocationException ex) {
+                        Exceptions.printStackTrace(ex);
                     }
                 }
-            });
+
+                ParserManager.parseWhenScanFinished(Collections.singleton(Source.create(bdoc)), new UserTask() {
+
+                    @Override
+                    public void run(ResultIterator resultIterator) throws Exception {
+                        ParserResult info = (ParserResult) resultIterator.getParserResult();
+                        if (info != null) {
+                            parserResult = info;
+                            parent.stateChanged(null);
+                        }
+                    }
+                });
+            }
+        } catch (DataObjectNotFoundException ex) {
+            Exceptions.printStackTrace(ex);
+        } catch (IOException | ParseException ex) {
+            Exceptions.printStackTrace(ex);
         }
     }
 
@@ -208,13 +252,13 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         newNameLabel = new javax.swing.JLabel();
         newNameTextField = new javax.swing.JTextField();
         classNameLabel = new javax.swing.JLabel();
-        classNameTextField = new javax.swing.JTextField();
         modifierLabel = new javax.swing.JLabel();
         modifierComboBox = new javax.swing.JComboBox();
         fileNameBrowseButton = new javax.swing.JButton();
         fileNameTextField = new javax.swing.JTextField();
         newFileCheckBox = new javax.swing.JCheckBox();
         generatePhpDocCheckBox = new javax.swing.JCheckBox();
+        classNameComboBox = new javax.swing.JComboBox();
 
         setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 11, 11));
 
@@ -255,6 +299,12 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
 
         org.openide.awt.Mnemonics.setLocalizedText(generatePhpDocCheckBox, org.openide.util.NbBundle.getMessage(MovePanel.class, "LBL_GeneratePhpDoc")); // NOI18N
 
+        classNameComboBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                classNameComboBoxActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -271,17 +321,16 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(fileNameTextField)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(newTypeComboBox, 0, 180, Short.MAX_VALUE)
-                        .addComponent(classNameTextField))
-                    .addComponent(newNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(modifierComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(newTypeComboBox, 0, 180, Short.MAX_VALUE)
+                    .addComponent(newNameTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 180, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(fileNameBrowseButton)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(newFileCheckBox)))
-                .addContainerGap(14, Short.MAX_VALUE))
+                        .addComponent(newFileCheckBox))
+                    .addComponent(classNameComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(modifierComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(layout.createSequentialGroup()
                 .addComponent(generatePhpDocCheckBox)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -296,7 +345,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(classNameLabel)
-                    .addComponent(classNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(classNameComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(modifierLabel)
@@ -322,6 +371,7 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
                 .setTitle(NbBundle.getMessage(MovePanel.class, "LBL_Browser"))
                 .setDefaultWorkingDirectory(new File(fileNameTextField.getText()));
         File fileChoose;
+
         if (!newFileCheckBox.isSelected()) {
             fileChoose = fileBuilder.showOpenDialog();
         }
@@ -339,19 +389,12 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         if (fileChoose != null) {
             fileNameTextField.setText(fileChoose.getAbsolutePath());
             FileObject fileObject = FileUtil.toFileObject(fileChoose);
-            
-            try {
-                parseChoosedFile(fileObject);
-            } catch (DataObjectNotFoundException ex) {
-                Exceptions.printStackTrace(ex);
-            } catch (IOException | ParseException ex) {
-                Exceptions.printStackTrace(ex);
-            }
+            parseChoosedFile(fileObject);
         }
     }//GEN-LAST:event_fileNameBrowseButtonActionPerformed
 
     private void newTypeComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newTypeComboBoxActionPerformed
-        
+
         configureForm();
     }//GEN-LAST:event_newTypeComboBoxActionPerformed
 
@@ -359,9 +402,23 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         // TODO add your handling code here:
     }//GEN-LAST:event_newFileCheckBoxActionPerformed
 
+    private void classNameComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_classNameComboBoxActionPerformed
+        Model model = ModelFactory.getModel((PHPParseResult) parserResult);
+        ElementQuery.Index index = model.getIndexScope().getIndex();
+        String className = (String) classNameComboBox.getSelectedItem();
+        ClassElement classElement = ModelUtils.getFirst(index.getClasses(NameKind.exact(className)));
+        
+        if (classElement != null && classElement.getFileObject() != null) {
+            File selectFile = FileUtil.toFile(classElement.getFileObject());
+            fileNameTextField.setText(selectFile.getAbsolutePath());
+
+            parseChoosedFile(classElement.getFileObject());
+        }
+    }//GEN-LAST:event_classNameComboBoxActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JComboBox classNameComboBox;
     private javax.swing.JLabel classNameLabel;
-    private javax.swing.JTextField classNameTextField;
     private javax.swing.JButton fileNameBrowseButton;
     private javax.swing.JTextField fileNameTextField;
     private javax.swing.JCheckBox generatePhpDocCheckBox;

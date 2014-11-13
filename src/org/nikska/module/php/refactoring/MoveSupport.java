@@ -67,6 +67,7 @@ public final class MoveSupport {
     private final Set<PhpElement> variableAssignedInMoveScope;
     private final List<ASTNode> nodes;
 
+    public static final String TYPE_PARENT_METHOD = "Parent method";
     public static final String TYPE_METHOD = "Method";
     public static final String TYPE_FUNCTION = "Function";
     public static final String TYPE_NEW_FILE = "New File";
