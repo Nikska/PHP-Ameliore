@@ -23,4 +23,4 @@ Now your code at the and of your class on a new method.
 
 ## License
 
-[Common Development and Distribution License (CDDL) v1.0 and GNU General Public License (GPL) v2](http://netbeans.org/cddl-gplv2.html)
+[GNU General Public License (GPL) v2](http://www.gnu.org/licenses)

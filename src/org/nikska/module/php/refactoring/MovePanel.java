@@ -18,7 +18,6 @@ import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;

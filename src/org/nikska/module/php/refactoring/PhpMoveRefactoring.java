@@ -82,13 +82,14 @@ public final class PhpMoveRefactoring extends AbstractRefactoring {
     public ClassDeclaration getClassDeclaration() {
         Model model = getParserResult().getModel();
         ClassScope classe = ModelUtils.getFirst(ModelUtils.getDeclaredClasses(model.getFileScope()));
-
-        OffsetRange range = classe.getBlockRange();
-        if (range != null) {
-            List<ASTNode> nodes = NavUtils.underCaret(parserResult, range.getStart());
-            for(ASTNode node : nodes) {
-                if (node instanceof ClassDeclaration) {
-                    return (ClassDeclaration) node;
+        if (classe != null) {
+            OffsetRange range = classe.getBlockRange();
+            if (range != null) {
+                List<ASTNode> nodes = NavUtils.underCaret(parserResult, range.getStart());
+                for(ASTNode node : nodes) {
+                    if (node instanceof ClassDeclaration) {
+                        return (ClassDeclaration) node;
+                    }
                 }
             }
         }

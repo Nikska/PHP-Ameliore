@@ -25,6 +25,7 @@ import org.netbeans.modules.refactoring.spi.ui.CustomRefactoringPanel;
 import org.netbeans.modules.refactoring.spi.ui.RefactoringUI;
 import org.netbeans.modules.refactoring.spi.ui.RefactoringUIBypass;
 import org.netbeans.modules.refactoring.spi.ui.UI;
+import org.nikska.module.php.refactoring.util.RefactoringUtil;
 import org.openide.util.HelpCtx;
 import org.openide.util.NbBundle;
 import org.openide.util.lookup.Lookups;
@@ -88,7 +89,8 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
 
     @NbBundle.Messages({
         "MSG_Error_BadFileType=The file must be a valid PHP file.",
-        "MSG_Error_NewNameEmpty=The new name must be not empty."
+        "MSG_Error_NewNameEmpty=The new name must be not empty.",
+        "MSG_Error_BadSelectedFile=Class not found. You can't refactor with method in this file."
     })
     @Override
     public Problem checkParameters() {
@@ -102,6 +104,11 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
 
             if (!(panel.getParserResult() instanceof PHPParseResult)) {
                 return new Problem(true, Bundle.MSG_Error_BadFileType());
+            }
+            
+            if (MoveSupport.TYPE_METHOD.equals(newType) 
+                    && RefactoringUtil.getFirstClassDeclaration((PHPParseResult) panel.getParserResult()) == null) {
+                return new Problem(true, Bundle.MSG_Error_BadSelectedFile());
             }
 
         }

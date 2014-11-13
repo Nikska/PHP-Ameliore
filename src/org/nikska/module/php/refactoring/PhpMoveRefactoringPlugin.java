@@ -31,6 +31,7 @@ import org.netbeans.modules.refactoring.spi.RefactoringCommit;
 import org.netbeans.modules.refactoring.spi.RefactoringElementsBag;
 import org.netbeans.modules.refactoring.spi.RefactoringPlugin;
 import org.nikska.module.php.refactoring.MoveSupport.Results;
+import org.nikska.module.php.refactoring.util.RefactoringUtil;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.loaders.DataObjectNotFoundException;
@@ -209,7 +210,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     private void createNewMethod(CloneableEditorSupport ces, List<Difference> diffs, String text) {
-        ClassDeclaration classDeclaration = getRefactoring().getClassDeclaration();
+        ClassDeclaration classDeclaration = RefactoringUtil.getFirstClassDeclaration(getRefactoring().getParserResult());
         if (classDeclaration != null) {
             int classOffsetEnd = classDeclaration.getEndOffset() - 1;
             String newMethod = "";
