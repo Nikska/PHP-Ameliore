@@ -100,18 +100,22 @@ public abstract class RefactoringTask extends UserTask implements Runnable {
 
     abstract static class TextComponentTask extends RefactoringTask {
 
-        private final JTextComponent textC;
-        private final int caret;
         private final OffsetRange offsetRange;
         private final Document document;
 
         public TextComponentTask(final EditorCookie ec) {
-            this.textC = ec.getOpenedPanes()[0];
+            final JTextComponent textC = ec.getOpenedPanes()[0];
             this.document = textC.getDocument();
-            this.caret = textC.getCaretPosition();
             this.offsetRange = new OffsetRange(textC.getSelectionStart(), textC.getSelectionEnd());
 
-            assert caret != -1;
+            assert textC.getSelectionStart() != -1;
+        }
+        
+        public TextComponentTask(Document document, OffsetRange offsetRange) {
+            this.document = document;
+            this.offsetRange = new OffsetRange(offsetRange.getStart(), offsetRange.getEnd());
+
+            assert offsetRange.getStart() != -1;
         }
 
         @Override
@@ -125,7 +129,7 @@ public abstract class RefactoringTask extends UserTask implements Runnable {
             if (parserResult instanceof PHPParseResult) {
                 Program root = getRoot((PHPParseResult) parserResult);
                 if (root != null) {
-                    uiHolder = createRefactoringUI((PHPParseResult) parserResult, caret, offsetRange);
+                    uiHolder = createRefactoringUI((PHPParseResult) parserResult, offsetRange);
                     return;
                 }
             }
@@ -137,7 +141,7 @@ public abstract class RefactoringTask extends UserTask implements Runnable {
             return (info instanceof PHPParseResult) ? ((PHPParseResult) info).getProgram() : null;
         }
 
-        protected abstract RefactoringUIHolder createRefactoringUI(final PHPParseResult info, final int offset, OffsetRange offsetRange);
+        protected abstract RefactoringUIHolder createRefactoringUI(final PHPParseResult info, OffsetRange offsetRange);
 
     }
 

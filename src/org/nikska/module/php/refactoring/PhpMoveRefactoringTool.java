@@ -20,8 +20,8 @@ import java.util.Set;
 import javax.swing.text.BadLocationException;
 import org.netbeans.editor.BaseDocument;
 import org.netbeans.editor.Utilities;
-import org.netbeans.modules.php.editor.api.elements.PhpElement;
 import org.netbeans.modules.php.editor.model.TypeAssignments;
+import org.netbeans.modules.php.editor.model.VariableName;
 import org.openide.cookies.EditorCookie;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
@@ -62,12 +62,12 @@ public class PhpMoveRefactoringTool {
         return newText;
     }
 
-    public static String getReturnsAssignment(Set<PhpElement> returnAssignments) {
+    public static String getReturnsAssignment(Set<VariableName> returnAssignments) {
         String returns = "";
         boolean hasReturns = false;
         int countReturn = 0;
 
-        for (PhpElement element : returnAssignments) {
+        for (VariableName element : returnAssignments) {
             if (hasReturns) {
                 returns += ", ";
             }
@@ -87,9 +87,8 @@ public class PhpMoveRefactoringTool {
         return "";
     }
 
-    public static String getUsageNewDeclaration(PhpMoveRefactoring refactoring, Set<PhpElement> returnAssignments, Set<PhpElement> parameters) {
+    public static String getUsageNewDeclaration(PhpMoveRefactoring refactoring, Set<VariableName> returnAssignments, Set<VariableName> parameters) {
         String newDeclaration = PhpMoveRefactoringTool.getReturnsAssignment(returnAssignments);
-
         switch (refactoring.getNewType()) {
             case MoveSupport.TYPE_NEW_FILE:
                 return "include('" + refactoring.getResultFileObject().getPath() + "');";
@@ -103,16 +102,16 @@ public class PhpMoveRefactoringTool {
         return newDeclaration;
     }
 
-    public static String getPhpDoc(PhpMoveRefactoring refactoring, Set<PhpElement> parameters, Set<PhpElement> returns) {
+    public static String getPhpDoc(PhpMoveRefactoring refactoring, Set<VariableName> parameters, Set<VariableName> returns) {
         String phpDoc = "/**\n";
         phpDoc += "* Refactored "+ refactoring.getNewName() + "\n";
         phpDoc += "*\n";
 
-        for (PhpElement parameter : parameters) {
+        for (VariableName parameter : parameters) {
             phpDoc += "* @param " + findTypeName(parameter) + " " + parameter.getName() + "\n";
         }
 
-        for (PhpElement returnElement : returns) {
+        for (VariableName returnElement : returns) {
             phpDoc += "* @return " + findTypeName(returnElement) + "\n";
         }
 
@@ -120,7 +119,7 @@ public class PhpMoveRefactoringTool {
         return phpDoc;
     }
 
-    public static String findTypeName(PhpElement parameter) {
+    public static String findTypeName(VariableName parameter) {
         String typeName = "mixed";
 
         if (parameter instanceof TypeAssignments) {
@@ -133,8 +132,23 @@ public class PhpMoveRefactoringTool {
 
         return typeName;
     }
+    
+    public static String getNewDeclaration(PhpMoveRefactoring refactoring, String text) {
+        MoveSupport support = refactoring.getRefactoringSource().lookup(MoveSupport.class);
+        String newDeclaration = "";
+        if (refactoring.isGeneratePhpDoc()) {
+            newDeclaration += PhpMoveRefactoringTool.getPhpDoc(refactoring, support.getParameters(), support.getReturns());
+        }
+        
+        newDeclaration += 
+            PhpMoveRefactoringTool.getStartNewDeclaration(refactoring, support.getParameters())
+                        + text
+                        + PhpMoveRefactoringTool.getReturnDeclaration(support.getReturns())
+                        + PhpMoveRefactoringTool.getEndNewDeclaration();
+        return newDeclaration;
+    }
 
-    public static String getStartNewDeclaration(PhpMoveRefactoring refactoring, Set<PhpElement> parameters) {
+    public static String getStartNewDeclaration(PhpMoveRefactoring refactoring, Set<VariableName> parameters) {
         String newDeclaration = "";
 
         if ((refactoring.getNewType().equals(MoveSupport.TYPE_METHOD) ||
@@ -152,17 +166,17 @@ public class PhpMoveRefactoringTool {
         return newDeclaration;
     }
 
-    public static String getReturnDeclaration(Set<PhpElement> phpElements) {
+    public static String getReturnDeclaration(Set<VariableName> phpElements) {
         String returns = "\n" + PhpMoveRefactoringTool.getReturns(phpElements) + "\n";
         return returns;
     }
 
-    private static String getReturns(Set<PhpElement> phpElements) {
+    private static String getReturns(Set<VariableName> phpElements) {
         String returns = "";
         boolean hasReturns = false;
         int countReturn = 0;
 
-        for (PhpElement element : phpElements) {
+        for (VariableName element : phpElements) {
             if (hasReturns) {
                 returns += ", ";
             }
@@ -182,10 +196,10 @@ public class PhpMoveRefactoringTool {
         return "";
     }
 
-    private static String getParameters(Set<PhpElement> parameters) {
+    private static String getParameters(Set<VariableName> parameters) {
         String returnParameters = "";
         boolean hasParameter = false;
-        for (PhpElement element : parameters) {
+        for (VariableName element : parameters) {
             if (hasParameter) {
                 returnParameters += ", ";
             }

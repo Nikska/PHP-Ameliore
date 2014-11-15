@@ -30,7 +30,6 @@ import org.netbeans.modules.refactoring.spi.ProgressProviderAdapter;
 import org.netbeans.modules.refactoring.spi.RefactoringCommit;
 import org.netbeans.modules.refactoring.spi.RefactoringElementsBag;
 import org.netbeans.modules.refactoring.spi.RefactoringPlugin;
-import org.nikska.module.php.refactoring.MoveSupport.Results;
 import org.nikska.module.php.refactoring.util.RefactoringUtil;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
@@ -82,14 +81,12 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     @Override
     public Problem prepare(final RefactoringElementsBag elementsBag) {
         fireProgressListenerStep();
-        Results results = usages.getResults();
-        results.addEntry(usages.getSourceFileObject());
-        refactorResults(results, elementsBag, usages.getSourceFileObject());
+        refactorResults(elementsBag, usages.getSourceFileObject());
         fireProgressListenerStop();
         return null;
     }
 
-    protected void refactorResults(Results results, RefactoringElementsBag refactoringElements, FileObject declarationFileObject) {
+    protected void refactorResults(RefactoringElementsBag refactoringElements, FileObject declarationFileObject) {
         final ModificationResult modificationResult = new ModificationResult();
 
         refactorElement(modificationResult);
@@ -211,7 +208,7 @@ public class PhpMoveRefactoringPlugin extends ProgressProviderAdapter implements
     }
 
     private void createNewMethod(CloneableEditorSupport ces, List<Difference> diffs, String text) {
-        ClassDeclaration classDeclaration = RefactoringUtil.getFirstClassDeclaration(getRefactoring().getParserResult());
+        ClassDeclaration classDeclaration = RefactoringUtil.getClassDeclaration(getRefactoring().getParserResult(), usages.getBegin());
         if (classDeclaration != null) {
             int classOffsetEnd = classDeclaration.getEndOffset() - 1;
             String newMethod = "";

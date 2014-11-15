@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import javax.swing.event.ChangeListener;
-import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
 import org.netbeans.modules.refactoring.api.AbstractRefactoring;
 import org.netbeans.modules.refactoring.api.Problem;
@@ -67,8 +66,7 @@ public class PhpMovefactoringUI implements RefactoringUI, RefactoringUIBypass {
     @Override
     public CustomRefactoringPanel getPanel(ChangeListener parent) {
         if (panel == null) {
-            OffsetRange offsetRange = new OffsetRange(usage.getBegin(), usage.getEnd());
-            panel = new MovePanel(usage, parent, offsetRange, NbBundle.getMessage(MovePanel.class, "LBL_Move")); //NOI18N
+            panel = new MovePanel(usage, parent); //NOI18N
         }
 
         return panel;

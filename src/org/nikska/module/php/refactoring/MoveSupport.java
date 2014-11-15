@@ -15,17 +15,10 @@
 package org.nikska.module.php.refactoring;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
-import javax.swing.Icon;
-import org.netbeans.modules.csl.api.ElementKind;
-import org.netbeans.modules.csl.api.Modifier;
 import org.netbeans.modules.csl.api.OffsetRange;
-import org.netbeans.modules.csl.api.UiUtils;
 import org.netbeans.modules.php.editor.NavUtils;
 import org.netbeans.modules.php.editor.api.ElementQuery;
 import org.netbeans.modules.php.editor.api.ElementQueryFactory;
@@ -56,25 +49,23 @@ import org.netbeans.modules.php.editor.parser.astnodes.FunctionDeclaration;
     @ActionReference(id = @ActionID(category = "Refactoring", id = "org.nikska.modules.refactoring.api.ui.MoveAction"), path = "Loaders/text/x-php5/Actions", position = 1700)
 })
 public final class MoveSupport {
-
-    private final PHPParseResult sourceResult;
-    private final Results results;
-    private final OffsetRange offsetRange;
-    private final ElementQuery.Index index;
-    private final Set<PhpElement> variableUsedInMoveScope;
-    private final Set<PhpElement> variableBeforeMoveScope;
-    private final Set<PhpElement> variableAfterMoveScope;
-    private final Set<PhpElement> variableAssignedInMoveScope;
-    private final List<ASTNode> nodes;
-
-    public static final String TYPE_PARENT_METHOD = "Parent method";
-    public static final String TYPE_METHOD = "Method";
     public static final String TYPE_FUNCTION = "Function";
     public static final String TYPE_NEW_FILE = "New File";
+    public static final String TYPE_PARENT_METHOD = "Parent method";
+    public static final String TYPE_METHOD = "Method";
 
-    private MoveSupport(PHPParseResult result, int offset, OffsetRange offsetRange) {
+    @Deprecated
+    private final PHPParseResult sourceResult;
+    private final OffsetRange offsetRange;
+    private final ElementQuery.Index index;
+    private final Set<VariableName> variableUsedInMoveScope;
+    private final Set<VariableName> variableBeforeMoveScope;
+    private final Set<VariableName> variableAfterMoveScope;
+    private final Set<VariableName> variableAssignedInMoveScope;
+    private final List<ASTNode> nodes;
+
+    private MoveSupport(PHPParseResult result, OffsetRange offsetRange) {
         this.sourceResult = result;
-        this.results = new Results();
         FileObject fo = result.getSnapshot().getSource().getFileObject();
         this.offsetRange = offsetRange;
         this.index = ElementQueryFactory.createIndexQuery(QuerySupportFactory.getDependent(fo));
@@ -118,6 +109,7 @@ public final class MoveSupport {
         }
     }
 
+    @Deprecated
     public PHPParseResult getParseResult() {
         return sourceResult;
     }
@@ -134,24 +126,13 @@ public final class MoveSupport {
         return sourceResult.getSnapshot().getSource().getFileObject();
     }
 
-    public static MoveSupport getInstance(ElementQuery.Index index, final PHPParseResult info, final int offset, OffsetRange offsetRange) {
-        return new MoveSupport(info, offset, offsetRange);
+    public static MoveSupport getInstance(final PHPParseResult info, OffsetRange offsetRange) {
+        return new MoveSupport(info, offsetRange);
     }
 
-    private ElementKind getElementKind() {
-        return ElementKind.OTHER;
-    }
-
-    Results getResults() {
-        return results;
-    }
-
-    /**
-     * @todo a deplacer dans une autre classe
-     */
-    public Set<PhpElement> getParameters() {
-        Set<PhpElement> elements = new HashSet<>();
-        for (PhpElement element : variableUsedInMoveScope) {
+    public Set<VariableName> getParameters() {
+        Set<VariableName> elements = new HashSet<>();
+        for (VariableName element : variableUsedInMoveScope) {
             if (variableBeforeMoveScope.contains(element)) {
                 elements.add(element);
             }
@@ -159,9 +140,9 @@ public final class MoveSupport {
         return elements;
     }
 
-    public Set<PhpElement> getReturnsAssignment() {
-        Set<PhpElement> elements = new HashSet<>();
-        for (PhpElement element : variableAssignedInMoveScope) {
+    public Set<VariableName> getReturnsAssignment() {
+        Set<VariableName> elements = new HashSet<>();
+        for (VariableName element : variableAssignedInMoveScope) {
             if (variableAfterMoveScope.contains(element)) {
                 elements.add(element);
             }
@@ -170,9 +151,9 @@ public final class MoveSupport {
         return elements;
     }
     
-    public Set<PhpElement> getReturns() {
-        Set<PhpElement> elements = new HashSet<>();
-        for (PhpElement element : variableAssignedInMoveScope) {
+    public Set<VariableName> getReturns() {
+        Set<VariableName> elements = new HashSet<>();
+        for (VariableName element : variableAssignedInMoveScope) {
             if (variableAfterMoveScope.contains(element)) {
                 elements.add(element);
             }
@@ -278,43 +259,6 @@ public final class MoveSupport {
             return false;
         }
         return !isFirstOccuranceAssignment(occurences, offsetRange);
-    }
-
-    public final class Results {
-
-        Collection<MoveElement> elements = new TreeSet<>(new Comparator<MoveElement>() {
-
-            @Override
-            public int compare(MoveElement o1, MoveElement o2) {
-                String path1 = o1.getFile() != null ? o1.getFile().getPath() : ""; //NOI18N
-                String path2 = o2.getFile() != null ? o2.getFile().getPath() : ""; //NOI18N
-                int retval = path1.compareTo(path2);
-                if (retval == 0) {
-                    int offset1 = o1.getPosition().getBegin().getOffset();
-                    int offset2 = o2.getPosition().getBegin().getOffset();
-                    retval = offset1 < offset2 ? -1 : 1;
-                }
-                return retval;
-            }
-        });
-
-        private Results() {
-        }
-
-        public void addEntry(FileObject fileObject) {
-            Icon icon = UiUtils.getElementIcon(MoveSupport.this.getElementKind(), Collections.<Modifier>emptyList());
-            MoveElement moveElement = MoveElement.create("Name",
-                    sourceResult,
-                    new OffsetRange(offsetRange.getStart(), offsetRange.getStart()),
-                    icon);
-            if (moveElement != null) {
-                elements.add(moveElement);
-            }
-        }
-
-        public Collection<MoveElement> getResultElements() {
-            return Collections.unmodifiableCollection(elements);
-        }
     }
 
     public boolean isInMethod() {

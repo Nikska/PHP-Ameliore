@@ -69,8 +69,8 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
     /**
      * Creates new form RenamePanelName
      */
-    public MovePanel(MoveSupport support, ChangeListener parent, OffsetRange offsetRange, String name) {
-        setName(name);
+    public MovePanel(MoveSupport support, ChangeListener parent) {
+        setName(NbBundle.getMessage(MovePanel.class, "LBL_Move"));
         this.file = support.getSourceFileObject();
         this.parent = parent;
         initComponents();
@@ -81,8 +81,9 @@ public class MovePanel extends JPanel implements CustomRefactoringPanel {
         newTypeComboBox.setSelectedIndex(0);
         parserSource = support.getParseResult();
         parserResult = support.getParseResult();
-
-        Set<ClassElement> classes = RefactoringUtil.getSuperClasses((PHPParseResult) parserSource, offsetRange);
+        
+        OffsetRange offsetRange = new OffsetRange(support.getBegin(), support.getEnd());
+        Set<ClassElement> classes = RefactoringUtil.getSuperClasses(parserSource, offsetRange);
         for (ClassElement classElement : classes) {
             classNameComboBox.addItem(classElement.getName());
         }

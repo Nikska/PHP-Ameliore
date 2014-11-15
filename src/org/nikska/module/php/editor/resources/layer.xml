@@ -8,6 +8,7 @@
                     <attr name="position" intvalue="100"/>
                     <attr name="SystemFileSystem.localizingBundle" stringvalue="org.nikska.module.php.editor.verification.Bundle"/>
                     <file name="org-nikska-module-php-editor-verification-UndeclaredHint.instance" />
+                    <file name="org-nikska-module-php-editor-verification-AmelioreNestedBlocksHint.instance" />
                 </folder>
             </folder>
         </folder>

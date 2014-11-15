@@ -14,6 +14,7 @@
  */
 package org.nikska.module.php.refactoring.util;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +36,24 @@ import org.netbeans.modules.php.editor.parser.PHPParseResult;
  */
 public class RefactoringUtil {
     
+    public static ClassDeclaration getClassDeclaration(PHPParseResult parserResult, int offset) {
+        Model model = parserResult.getModel();
+        Collection<? extends ClassScope> classes = ModelUtils.getDeclaredClasses(model.getFileScope());
+        for(ClassScope classScope : classes) {
+            OffsetRange range = classScope.getBlockRange();
+            List<ASTNode> nodes = NavUtils.underCaret(parserResult, range.getStart());
+            for(ASTNode node : nodes) {
+                if (node instanceof ClassDeclaration && 
+                        node.getStartOffset() < offset && 
+                        node.getEndOffset() > offset) {
+                    return (ClassDeclaration) node;
+                }
+            }
+        }
+        return null;
+    }
+    
+    @Deprecated
     public static ClassDeclaration getFirstClassDeclaration(PHPParseResult parserResult) {
         Model model = parserResult.getModel();
         ClassScope classe = ModelUtils.getFirst(ModelUtils.getDeclaredClasses(model.getFileScope()));
@@ -74,8 +93,10 @@ public class RefactoringUtil {
         if (classElement !=null && classElement.getSuperClassName() != null) {
             String superClassName = classElement.getSuperClassName().getName();
             ClassElement superClassElement = ModelUtils.getFirst(index.getClasses(NameKind.exact(superClassName)));
-            classes.add(superClassElement);
-            classes.addAll(getSuperClasses(parserResult, superClassName));
+            if (superClassElement != null) {
+                classes.add(superClassElement);
+                classes.addAll(getSuperClasses(parserResult, superClassName));
+            }
         }
 
         return classes;

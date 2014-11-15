@@ -14,6 +14,7 @@
  */
 package org.nikska.module.php.refactoring;
 
+import javax.swing.text.JTextComponent;
 import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.php.editor.api.ElementQuery;
 import static org.netbeans.modules.php.editor.api.ElementQueryFactory.getIndexQuery;
@@ -24,6 +25,7 @@ import org.netbeans.modules.refactoring.spi.ui.UI;
 import org.openide.cookies.EditorCookie;
 import org.openide.util.Lookup;
 import org.openide.windows.TopComponent;
+import javax.swing.text.Document;
 
 /**
  *
@@ -40,30 +42,35 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider {
 
     @Override
     public boolean canMove(Lookup lookup) {
-        return true;
+        return isFromEditor(lookup);
     }
 
     @Override
     public void doMove(final Lookup lookup) {
         EditorCookie ec = lookup.lookup(EditorCookie.class);
         if (isFromEditor(lookup)) {
-            moveElement(ec);
+            final JTextComponent textC = ec.getOpenedPanes()[0];
+            Document document = textC.getDocument();
+            OffsetRange offsetRange = new OffsetRange(textC.getSelectionStart(), textC.getSelectionEnd());
+
+            moveElement(document, offsetRange);
         }
     }
 
-    private void moveElement(EditorCookie ec) {
-        new RefactoringTask.TextComponentTask(ec) {
+    public void moveElement(Document document, OffsetRange offsetRange) {
+        
+        new RefactoringTask.TextComponentTask(document, offsetRange) {
 
             @Override
-            protected RefactoringUIHolder createRefactoringUI(final PHPParseResult info, final int offset, OffsetRange offsetRange) {
+            protected RefactoringUIHolder createRefactoringUI(final PHPParseResult info, OffsetRange offsetRange) {
                 RefactoringUIHolder result = RefactoringUIHolder.NONE;
-                ElementQuery.Index index = getIndexQuery(info);
-                MoveSupport ctx = MoveSupport.getInstance(index, info, offset, offsetRange);
+                MoveSupport ctx = MoveSupport.getInstance(info, offsetRange);
                 if (ctx != null) {
                     result = new RefactoringUIHolderImpl(new PhpMovefactoringUI(ctx));
                 }
                 return result;
             }
+
         }.run();
     }
 
