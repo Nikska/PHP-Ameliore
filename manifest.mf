@@ -3,4 +3,3 @@ AutoUpdate-Show-In-Client: true
 OpenIDE-Module: org.nikska.module.php
 OpenIDE-Module-Layer: org/nikska/module/php/editor/resources/layer.xml
 OpenIDE-Module-Localizing-Bundle: org/nikska/module/php/Bundle.properties
-OpenIDE-Module-Specification-Version: 0.1

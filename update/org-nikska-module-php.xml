@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?><module codename="org.nikska.module.php">
+    <module_version install_time="1416155843674" last="true" origin="installer" specification_version="0.2.2">
+        <file crc="1103995117" name="config/Modules/org-nikska-module-php.xml"/>
+        <file crc="2407524009" name="modules/org-nikska-module-php.jar"/>
+    </module_version>
+</module>
