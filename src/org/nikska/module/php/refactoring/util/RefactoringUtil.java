@@ -30,11 +30,22 @@ import org.netbeans.modules.php.editor.model.ModelUtils;
 import org.netbeans.modules.php.editor.parser.astnodes.ASTNode;
 import org.netbeans.modules.php.editor.parser.astnodes.ClassDeclaration;
 import org.netbeans.modules.php.editor.parser.PHPParseResult;
+import org.netbeans.modules.php.editor.parser.astnodes.DoStatement;
+import org.netbeans.modules.php.editor.parser.astnodes.ForEachStatement;
+import org.netbeans.modules.php.editor.parser.astnodes.ForStatement;
+import org.netbeans.modules.php.editor.parser.astnodes.IfStatement;
+import org.netbeans.modules.php.editor.parser.astnodes.Statement;
+import org.netbeans.modules.php.editor.parser.astnodes.WhileStatement;
 
 /**
  * @author Loïc Laverdant
  */
 public class RefactoringUtil {
+    
+    public static boolean isInClassDeclaration(PHPParseResult parserResult, int offset) {
+        ClassDeclaration classDeclaration  = getClassDeclaration(parserResult, offset);
+        return classDeclaration != null;
+    }
     
     public static ClassDeclaration getClassDeclaration(PHPParseResult parserResult, int offset) {
         Model model = parserResult.getModel();
@@ -100,6 +111,53 @@ public class RefactoringUtil {
         }
 
         return classes;
+    }
+    
+    public static OffsetRange getFullOffsetRange(ASTNode node) {
+        int start = node.getStartOffset();
+        int end = node.getEndOffset();
+        return new OffsetRange(start, end);
+    }
+    
+    public static OffsetRange getFullOffsetRange(ForEachStatement node) {
+        int start = node.getStartOffset();
+        Statement body = node.getStatement();
+        int end = body.getEndOffset();
+        return new OffsetRange(start, end);
+    }
+
+    public static OffsetRange getFullOffsetRange(ForStatement node) {
+        int start = node.getStartOffset();
+        Statement body = node.getBody();
+        int end = body.getEndOffset();
+        return new OffsetRange(start, end);
+    }
+
+    public static OffsetRange getFullOffsetRange(WhileStatement node) {
+        int start = node.getStartOffset();
+        Statement body = node.getBody();
+        int end = body.getEndOffset();
+        return new OffsetRange(start, end);
+    }
+    
+    public static OffsetRange getFullOffsetRange(DoStatement node) {
+        int start = node.getStartOffset();
+        Statement body = node.getBody();
+        int end = body.getEndOffset();
+        return new OffsetRange(start, end);
+    }
+    
+    public static OffsetRange getFullOffsetRange(IfStatement node) {
+        int start = node.getStartOffset();
+        int end = node.getEndOffset();
+        if (node.getFalseStatement() instanceof IfStatement) {
+            end = ((IfStatement) node.getFalseStatement()).getEndOffset();
+        }
+        else if (node.getTrueStatement() instanceof IfStatement) {
+            end = ((IfStatement) node.getTrueStatement()).getEndOffset();
+        }
+            
+        return new OffsetRange(start, end);
     }
     
 }

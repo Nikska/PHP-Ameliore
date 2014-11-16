@@ -39,7 +39,6 @@ import org.nikska.module.php.refactoring.PhpMoveRefactoringTool;
 import org.nikska.module.php.refactoring.util.RefactoringUtil;
 import org.openide.filesystems.FileObject;
 import org.openide.util.Exceptions;
-import org.openide.util.Lookup;
 import org.openide.util.NbBundle;
 import org.openide.util.lookup.Lookups;
 
@@ -53,18 +52,14 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
     private static final String NUMBER_OF_ALLOWED_NESTED_BLOCKS = "php.verification.number.of.allowed.nested.blocks"; //NOI18N
     private static final int DEFAULT_NUMBER_OF_ALLOWED_NESTED_BLOCKS = 2;
     private Preferences preferences;
-    private Lookup lookup;
-    private boolean isInClassDeclaration;
 
     @Override
     public void invoke(PHPRuleContext context, List<Hint> hints) {
 
         PHPParseResult phpParseResult = (PHPParseResult) context.parserResult;
-        isInClassDeclaration = false;
         if (phpParseResult.getProgram() != null) {
             FileObject fileObject = phpParseResult.getSnapshot().getSource().getFileObject();
             if (fileObject != null) {
-                lookup = fileObject.getLookup();
                 CheckVisitor checkVisitor = new CheckVisitor(fileObject, context.doc, phpParseResult);
                 phpParseResult.getProgram().accept(checkVisitor);
                 hints.addAll(checkVisitor.getHints());
@@ -96,7 +91,9 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
         )
         private Collection<? extends Hint> getHints() {
             for (ASTNode block : unallowedNestedBlocks) {
-                createHint(block);
+                if (RefactoringUtil.isInClassDeclaration(parserResult, block.getStartOffset())) {
+                    createHint(block);
+                }
             }
             return hints;
         }
@@ -124,16 +121,6 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
             List<HintFix> fixes = new ArrayList<>();
             fixes.add(new RefactoringHintFix(block, baseDocument, parserResult));
             return fixes;
-        }
-
-        @Override
-        public void visit(ClassDeclaration node) {
-            scan(node.getName());
-            Block body = node.getBody();
-            if (body != null) {
-                isInClassDeclaration = true;
-                scan(body.getStatements());
-            }
         }
 
         @Override
@@ -343,7 +330,8 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
         public void implement() throws Exception {
             
             Collection<Object> lookupContent = new ArrayList<>();
-            MoveSupport usage = MoveSupport.getInstance(parserResult, getOffsetRange());
+            OffsetRange offsetRange = RefactoringUtil.getFullOffsetRange(block);
+            MoveSupport usage = MoveSupport.getInstance(parserResult, offsetRange);
             lookupContent.add(usage);
             PhpMoveRefactoring refactoring = new PhpMoveRefactoring(Lookups.fixed(lookupContent.toArray()));
             configureRefactoring(refactoring);
@@ -352,8 +340,8 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
             EditList edits = new EditList(doc);
             
             String useCode = getGeneratedCode(refactoring, usage);
-            useCode = PhpMoveRefactoringTool.reformatNewText(refactoring.getResultFileObject(), getOffsetRange().getStart(), useCode.length(), useCode);
-            edits.replace(getOffsetRange().getStart(), getOffsetRange().getEnd() - getOffsetRange().getStart(), useCode, true, 0); //NOI18N
+            useCode = PhpMoveRefactoringTool.reformatNewText(refactoring.getResultFileObject(), offsetRange.getStart(), useCode.length(), useCode);
+            edits.replace(offsetRange.getStart(), offsetRange.getEnd() - offsetRange.getStart(), useCode, true, 0); //NOI18N
             
             String newCode = getGeneratedNewCode(refactoring, usage);
             newCode = PhpMoveRefactoringTool.reformatNewText(refactoring.getResultFileObject(), templateOffset, 0, newCode);
@@ -364,7 +352,9 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
         private int getTemplateOffset() {
             int offset = block.getEndOffset();
             ClassDeclaration classDeclaration = RefactoringUtil.getClassDeclaration(parserResult, offset);
-            offset = classDeclaration.getEndOffset() - 1;
+            if (classDeclaration != null) {
+                offset = classDeclaration.getEndOffset() - 1;
+            }
             return offset;
         }
 
@@ -383,31 +373,16 @@ public class AmelioreNestedBlocksHint extends NestedBlocksHint implements Custom
 
         private String getGeneratedCode(PhpMoveRefactoring refactoring, MoveSupport usage) {
             String generatedCode = "";
-
             generatedCode += PhpMoveRefactoringTool.getUsageNewDeclaration(refactoring, usage.getReturnsAssignment(), usage.getParameters());
-            
-
             return generatedCode;
         }
 
         private void configureRefactoring(PhpMoveRefactoring refactoring) {
-            if (isInClassDeclaration) {
-                refactoring.setNewType(MoveSupport.TYPE_METHOD);
-                refactoring.setNewName("refactoredMethod");
-                refactoring.setModifier("private");
-                refactoring.setParserResult(parserResult);
-            }
-        }
 
-        //Sera utilisé plus tard pour selectionner le bloc a refactoriser
-        private OffsetRange getOffsetRange() {
-            int start = block.getStartOffset();
-            int end = block.getEndOffset();
-            if (block instanceof ForEachStatement) {
-                Statement body = ((ForEachStatement) block).getStatement();
-                end = body.getEndOffset();
-            }
-            return new OffsetRange(start, end);
+            refactoring.setNewType(MoveSupport.TYPE_METHOD);
+            refactoring.setNewName("refactoredMethod");
+            refactoring.setModifier("private");
+            refactoring.setParserResult(parserResult);
         }
 
         @Override
